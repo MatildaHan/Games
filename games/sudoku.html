@@ -2,16 +2,24 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>数独</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
 .sudoku-layout {
     display: grid;
     grid-template-columns: 160px auto 180px;
-    gap: 28px;
+    gap: 24px;
     align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
-.diff-list { display: flex; flex-direction: column; gap: 10px; }
+.diff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 .diff-btn {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
@@ -23,6 +31,7 @@
     text-align: left;
     transition: all 0.2s;
     font-family: inherit;
+    min-height: 44px;
 }
 .diff-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
 .diff-btn.active { background: var(--primary); color: #000; font-weight: 700; border-color: var(--primary); }
@@ -30,27 +39,37 @@
 .diff-btn .prog { display: block; font-size: 11px; color: #94a3b8; margin-top: 3px; }
 .diff-btn.active .prog { color: #064e3b; }
 
+.sudoku-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
 .sudoku-board {
     display: grid;
-    grid-template-columns: repeat(9, 48px);
-    grid-template-rows: repeat(9, 48px);
+    grid-template-columns: repeat(9, var(--cell-size, 48px));
+    grid-template-rows: repeat(9, var(--cell-size, 48px));
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.5);
     border-radius: 6px;
     overflow: hidden;
+    max-width: 100%;
 }
 .sudoku-cell {
-    width: 48px; height: 48px;
+    width: var(--cell-size, 48px);
+    height: var(--cell-size, 48px);
     background: rgba(30, 41, 59, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--text);
-    font-size: 22px;
+    font-size: calc(var(--cell-size, 48px) * 0.45);
     font-weight: 500;
     text-align: center;
     outline: none;
     transition: background 0.15s;
     cursor: pointer;
     font-family: inherit;
+    padding: 0;
     -moz-appearance: textfield;
 }
 .sudoku-cell::-webkit-outer-spin-button,
@@ -60,7 +79,7 @@
 .sudoku-cell:nth-child(n+19):nth-child(-n+27),
 .sudoku-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
 
-.sudoku-cell.prefilled { color: #94a3b8; font-weight: 700; cursor: pointer; }
+.sudoku-cell.prefilled { color: #94a3b8; font-weight: 700; }
 .sudoku-cell.hl-light { background: var(--primary-dim); }
 .sudoku-cell.hl-same { background: var(--primary-mid); color: #fff; }
 .sudoku-cell.selected { background: rgba(74, 222, 128, 0.5); box-shadow: inset 0 0 0 2px var(--primary); }
@@ -76,7 +95,8 @@
     border: 1px solid rgba(255,255,255,0.05);
 }
 .num-btn {
-    width: 48px; height: 48px;
+    width: 48px;
+    height: 48px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.05);
@@ -86,10 +106,66 @@
     cursor: pointer;
     transition: all 0.15s;
     font-family: inherit;
+    min-width: 44px;
+    min-height: 44px;
 }
 .num-btn:hover { background: rgba(255,255,255,0.15); }
-.num-btn.erase { grid-column: span 3; width: 100%; background: rgba(239, 68, 68, 0.2); color: var(--danger); font-size: 14px; }
+.num-btn:active { background: var(--primary-mid); }
+.num-btn.erase {
+    grid-column: span 3;
+    width: 100%;
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    font-size: 14px;
+}
 .num-btn.erase:hover { background: rgba(239, 68, 68, 0.4); }
+
+.status-text { color: var(--text-sub); font-size: 13px; min-height: 18px; }
+
+/* ---------- 平板 ---------- */
+@media (max-width: 1023px) {
+    .sudoku-layout {
+        grid-template-columns: 120px auto 160px;
+        gap: 16px;
+    }
+    .sudoku-board { --cell-size: 40px; }
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .sudoku-layout {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        align-items: center;
+        justify-items: center;
+        height: auto;
+    }
+    .diff-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        gap: 6px;
+    }
+    .diff-btn {
+        flex: 1 1 auto;
+        min-width: 70px;
+        padding: 8px 10px;
+        font-size: 12px;
+        text-align: center;
+    }
+    .diff-btn .prog { font-size: 10px; }
+    .sudoku-board { --cell-size: min(9.5vw, 36px); }
+    .number-pad {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        padding: 8px;
+        max-width: 320px;
+        margin: 0 auto;
+    }
+    .num-btn { width: 100%; height: 48px; }
+    .num-btn.erase { grid-column: span 5; height: 44px; }
+}
 </style>
 </head>
 <body>
@@ -99,8 +175,8 @@
             <div class="card-title" style="margin-bottom:4px;">难度</div>
         </div>
 
-        <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-            <div style="color: var(--text-sub); font-size: 13px;" id="status">当前难度：简单</div>
+        <div class="sudoku-main">
+            <div class="status-text" id="status">当前难度：简单</div>
             <div class="sudoku-board" id="board"></div>
         </div>
 
@@ -219,6 +295,7 @@
             const input = document.createElement('input');
             input.type = 'text';
             input.maxLength = 1;
+            input.inputMode = 'none'; /* 手机上不弹系统键盘 */
             input.classList.add('sudoku-cell');
             input.dataset.index = i;
             const v = puzzleStr[i];
@@ -252,12 +329,8 @@
             const cell = boardEl.children[i];
             const r = Math.floor(i / 9), c = i % 9;
             const inBox = r >= boxR && r < boxR + 3 && c >= boxC && c < boxC + 3;
-            if (i !== idx && (r === row || c === col || inBox)) {
-                cell.classList.add('hl-light');
-            }
-            if (val && i !== idx && cell.value === val) {
-                cell.classList.add('hl-same');
-            }
+            if (i !== idx && (r === row || c === col || inBox)) cell.classList.add('hl-light');
+            if (val && i !== idx && cell.value === val) cell.classList.add('hl-same');
         }
         boardEl.children[idx].classList.add('selected');
     }
@@ -298,7 +371,6 @@
         }
         const input = boardEl.children[selectedIdx];
         if (input.readOnly) {
-            // 修复：明确提示用户不能修改预填格
             flashStatus('预填数字不可修改');
             return;
         }
@@ -341,8 +413,7 @@
     function checkCompletion() {
         let complete = true, hasError = false;
         for (let i = 0; i < 81; i++) {
-            const v = boardEl.children[i].value;
-            if (!v) { complete = false; break; }
+            if (!boardEl.children[i].value) { complete = false; break; }
         }
         if (!complete) return;
         for (let i = 0; i < 81; i++) {
