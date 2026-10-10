@@ -3,77 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>扫雷</title>
+<title>灭灯</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.mine-wrap {
+.lo-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     justify-content: center;
+    padding: 8px;
 }
-.mine-info {
-    display: flex;
-    gap: 16px;
+.lo-info {
     color: var(--text-sub);
     font-size: 14px;
-    flex-wrap: wrap;
-    justify-content: center;
+    text-align: center;
+    max-width: 500px;
+    line-height: 1.7;
 }
-.mine-info b { color: var(--primary); }
+.lo-info b { color: var(--primary); }
 
-.mine-grid-wrap {
-    max-width: 100%;
-    overflow: auto;
-    padding: 6px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
-    touch-action: manipulation;
-}
-.mine-grid {
+.lo-grid {
     display: grid;
-    gap: 2px;
-    margin: 0 auto;
-    width: max-content;
+    gap: 6px;
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    touch-action: manipulation;
+    max-width: 100%;
 }
-.mine-cell {
-    width: var(--cell, 30px);
-    height: var(--cell, 30px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255,255,255,0.1);
-    border-radius: 4px;
+.lo-cell {
+    width: var(--cell, 56px);
+    height: var(--cell, 56px);
+    border-radius: 10px;
+    background: #334155;
     cursor: pointer;
-    font-weight: 700;
-    font-size: calc(var(--cell, 30px) * 0.5);
-    transition: background 0.1s;
+    transition: all 0.15s;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
     user-select: none;
     -webkit-user-select: none;
+    border: 2px solid rgba(0,0,0,0.3);
 }
-.mine-cell:hover { background: rgba(255,255,255,0.2); }
-.mine-cell.revealed { background: rgba(0,0,0,0.3); cursor: default; }
-.mine-cell.mine { background: var(--danger); color: #fff; }
-.mine-cell.flag { background: #fbbf24; color: #000; }
-.mine-cell.n1 { color: #60a5fa; } .mine-cell.n2 { color: #4ade80; }
-.mine-cell.n3 { color: #f87171; } .mine-cell.n4 { color: #a78bfa; }
-.mine-cell.n5 { color: #fb923c; } .mine-cell.n6 { color: #22d3ee; }
-.mine-cell.n7 { color: #f472b6; } .mine-cell.n8 { color: #e5e7eb; }
+.lo-cell.on {
+    background: #facc15;
+    box-shadow: 0 0 20px rgba(250,204,21,0.7), inset 0 0 12px rgba(255,255,255,0.5);
+    border-color: rgba(255,255,255,0.4);
+}
+.lo-cell:active { transform: scale(0.94); }
 
-.mine-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-
-/* 手机切换模式按钮：左键 / 旗子 */
-.mode-toggle {
-    display: none;
+.lo-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.lo-levels {
+    display: flex;
     gap: 8px;
     background: rgba(0,0,0,0.3);
     padding: 6px;
     border-radius: 12px;
 }
-.mode-btn {
+.lo-level-btn {
     padding: 8px 16px;
     border-radius: 8px;
     background: transparent;
@@ -84,40 +72,42 @@
     cursor: pointer;
     font-family: inherit;
     min-height: 40px;
+    transition: all 0.15s;
 }
-.mode-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+.lo-level-btn:hover:not(.active) { background: rgba(255,255,255,0.08); }
+.lo-level-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+
+/* 通关提示 */
+.lo-result {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 15px;
+    min-height: 22px;
+    text-align: center;
+}
 
 /* ---------- 手机 ---------- */
 @media (max-width: 767px) {
-    .mine-info { font-size: 12px; gap: 10px; }
-    .mode-toggle { display: flex; }
-    .mine-btns .btn { font-size: 12px; padding: 8px 14px; }
+    .lo-info { font-size: 12px; }
+    .lo-grid { gap: 4px; padding: 8px; }
+    .lo-btns .btn { font-size: 13px; padding: 8px 14px; }
+    .lo-level-btn { padding: 6px 12px; font-size: 12px; }
 }
 </style>
 </head>
 <body>
 <div class="game-inner">
-    <div class="mine-wrap">
-        <div class="mine-info">
-            <span>💣 剩余 <b id="mineLeft">0</b></span>
-            <span>⏱ <b id="timeEl">0</b>s</span>
-            <span>难度 <b id="lvEl">—</b></span>
+    <div class="lo-wrap">
+        <div class="lo-info">
+            目标：让所有灯熄灭。<br>
+            点击一盏灯会翻转自己和上下左右的灯。步数 <b id="steps">0</b>
         </div>
-
-        <!-- 手机模式切换 -->
-        <div class="mode-toggle" id="modeToggle">
-            <button class="mode-btn active" data-mode="dig">⛏ 挖掘</button>
-            <button class="mode-btn" data-mode="flag">🚩 插旗</button>
-        </div>
-
-        <div class="mine-grid-wrap">
-            <div id="grid" class="mine-grid"></div>
-        </div>
-
-        <div class="mine-btns">
+        <div id="grid" class="lo-grid"></div>
+        <div class="lo-result" id="result"></div>
+        <div class="lo-btns">
             <button class="btn" id="btnNew">新游戏</button>
-            <button class="btn ghost" id="btnLv">切换难度</button>
         </div>
+        <div class="lo-levels" id="levels"></div>
     </div>
 </div>
 
@@ -126,111 +116,84 @@
 (function () {
     'use strict';
 
-    const LEVELS = [
-        { rows: 9,  cols: 9,  mines: 10, name: '简单' },
-        { rows: 16, cols: 16, mines: 40, name: '困难' },
-        { rows: 16, cols: 30, mines: 99, name: '专业' }
-    ];
-
-    let levelIdx = 0;
-    let rows, cols, mines;
-    let grid, revealed, flagged;
-    let gameOver, started, seconds, timer;
-    let touchMode = 'dig';   // 'dig' | 'flag'
+    const SIZES = [3, 5, 7];
+    let sizeIdx = 0;
+    let N, grid, steps, gameOver;
 
     const gridEl = document.getElementById('grid');
-    const gridWrap = gridEl.parentElement;
-    const mineLeftEl = document.getElementById('mineLeft');
-    const timeEl = document.getElementById('timeEl');
-    const lvEl = document.getElementById('lvEl');
-    const modeToggle = document.getElementById('modeToggle');
-
-    // 判断是否触摸设备
-    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const stepsEl = document.getElementById('steps');
+    const resultEl = document.getElementById('result');
+    const levelsEl = document.getElementById('levels');
 
     function calcCellSize() {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        // 手机端限制宽度
-        const availW = Math.min(vw - 60, 900);
-        const availH = vh * 0.55;
-        const byW = Math.floor((availW - cols * 2) / cols);
-        const byH = Math.floor((availH - rows * 2) / rows);
-        const size = Math.min(byW, byH, 32);
-        return Math.max(18, size);
+        const availW = Math.min(vw - 80, 500);
+        const availH = Math.min(vh - 300, 500);
+        const byW = Math.floor((availW - N * 6 - 24) / N);
+        const byH = Math.floor((availH - N * 6 - 24) / N);
+        return Math.max(28, Math.min(byW, byH, 56));
     }
 
-    function init() {
-        const lv = LEVELS[levelIdx];
-        rows = lv.rows; cols = lv.cols; mines = lv.mines;
-        grid = Array.from({ length: rows }, () => Array(cols).fill(0));
-        revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
-        flagged = Array.from({ length: rows }, () => Array(cols).fill(false));
-        gameOver = false;
-        started = false;
-        seconds = 0;
-        clearInterval(timer);
-        timeEl.textContent = '0';
-        mineLeftEl.textContent = mines;
-        lvEl.textContent = lv.name;
+    function buildLevels() {
+        levelsEl.innerHTML = '';
+        SIZES.forEach((s, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'lo-level-btn' + (i === sizeIdx ? ' active' : '');
+            btn.textContent = `${s}×${s}`;
+            btn.onclick = () => {
+                sizeIdx = i;
+                buildLevels();
+                init();
+            };
+            levelsEl.appendChild(btn);
+        });
+    }
 
-        // 手机上对专业难度给个提示
-        if (isTouch && cols > 20) {
-            // 自动缩小格子
+    // 从全灭状态随机点击若干次打乱（保证可解，因为操作是自逆的）
+    function init() {
+        N = SIZES[sizeIdx];
+        grid = Array.from({ length: N }, () => Array(N).fill(0));
+        steps = 0;
+        gameOver = false;
+        stepsEl.textContent = '0';
+        resultEl.textContent = '';
+
+        // 从全灭打乱：随机点 N*N*2 次
+        const times = N * N * 2;
+        for (let i = 0; i < times; i++) {
+            toggle(Math.floor(Math.random() * N), Math.floor(Math.random() * N), false);
+        }
+        // 若恰好全灭，重新打乱
+        if (grid.flat().every(v => v === 0)) {
+            init();
+            return;
         }
         render();
     }
 
-    function placeMines(sx, sy) {
-        let placed = 0;
-        let attempts = 0;
-        while (placed < mines && attempts < 10000) {
-            attempts++;
-            const x = Math.floor(Math.random() * cols);
-            const y = Math.floor(Math.random() * rows);
-            if (grid[y][x] === -1) continue;
-            if (Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1) continue;
-            grid[y][x] = -1;
-            placed++;
+    function toggle(x, y, count = true) {
+        for (const [dx, dy] of [[0,0],[0,1],[0,-1],[1,0],[-1,0]]) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N) grid[ny][nx] ^= 1;
         }
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
-                if (grid[y][x] === -1) continue;
-                let cnt = 0;
-                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-                    const ny = y + dy, nx = x + dx;
-                    if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] === -1) cnt++;
-                }
-                grid[y][x] = cnt;
-            }
+        if (count) {
+            steps++;
+            stepsEl.textContent = steps;
         }
     }
 
     function render() {
         const cell = calcCellSize();
         gridEl.style.setProperty('--cell', cell + 'px');
-        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
-
+        gridEl.style.gridTemplateColumns = `repeat(${N}, ${cell}px)`;
         gridEl.innerHTML = '';
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < N; y++) {
+            for (let x = 0; x < N; x++) {
                 const cellEl = document.createElement('div');
-                cellEl.className = 'mine-cell';
+                cellEl.className = 'lo-cell' + (grid[y][x] ? ' on' : '');
                 cellEl.dataset.x = x;
                 cellEl.dataset.y = y;
-                if (revealed[y][x]) {
-                    cellEl.classList.add('revealed');
-                    if (grid[y][x] === -1) {
-                        cellEl.classList.add('mine');
-                        cellEl.textContent = '💣';
-                    } else if (grid[y][x] > 0) {
-                        cellEl.textContent = grid[y][x];
-                        cellEl.classList.add('n' + grid[y][x]);
-                    }
-                } else if (flagged[y][x]) {
-                    cellEl.classList.add('flag');
-                    cellEl.textContent = '🚩';
-                }
                 gridEl.appendChild(cellEl);
             }
         }
@@ -238,129 +201,38 @@
 
     // 事件委托
     gridEl.addEventListener('click', e => {
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
-        if (touchMode === 'flag' && isTouch) rightClick(x, y);
-        else leftClick(x, y);
-    });
-
-    gridEl.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
-        rightClick(x, y);
-    });
-
-    // 长按 = 插旗（触屏）
-    let longPressTimer = null;
-    let longPressHandled = false;
-    gridEl.addEventListener('touchstart', e => {
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
-        longPressHandled = false;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
-        longPressTimer = setTimeout(() => {
-            longPressHandled = true;
-            rightClick(x, y);
-        }, 450);
-    }, { passive: true });
-
-    gridEl.addEventListener('touchend', e => {
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
+        if (gameOver) return;
+        const cellEl = e.target.closest('.lo-cell');
+        if (!cellEl) return;
+        const x = +cellEl.dataset.x, y = +cellEl.dataset.y;
+        toggle(x, y);
+        // 局部更新
+        updateCell(x, y);
+        // 更新周围 4 格
+        for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N) updateCell(nx, ny);
         }
-        if (longPressHandled) {
-            // 阻止 click 触发
-            e.preventDefault();
-            longPressHandled = false;
-        }
-    });
-
-    gridEl.addEventListener('touchmove', () => {
-        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-    }, { passive: true });
-
-    function leftClick(x, y) {
-        if (gameOver || revealed[y][x] || flagged[y][x]) return;
-        if (!started) {
-            started = true;
-            placeMines(x, y);
-            timer = setInterval(() => { seconds++; timeEl.textContent = seconds; }, 1000);
-        }
-        if (grid[y][x] === -1) {
+        if (grid.flat().every(v => v === 0)) {
             gameOver = true;
-            revealed[y][x] = true;
-            clearInterval(timer);
-            render();
-            setTimeout(() => alert('💥 踩雷了！'), 100);
-            return;
+            resultEl.textContent = `🎉 全部熄灭！共 ${steps} 步`;
         }
-        floodReveal(x, y);
-        render();
-        checkWin();
-    }
-
-    function floodReveal(x, y) {
-        const stack = [[x, y]];
-        while (stack.length) {
-            const [cx, cy] = stack.pop();
-            if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) continue;
-            if (revealed[cy][cx] || flagged[cy][cx]) continue;
-            revealed[cy][cx] = true;
-            if (grid[cy][cx] === 0) {
-                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-                    if (dx === 0 && dy === 0) continue;
-                    stack.push([cx + dx, cy + dy]);
-                }
-            }
-        }
-    }
-
-    function rightClick(x, y) {
-        if (gameOver || revealed[y][x]) return;
-        flagged[y][x] = !flagged[y][x];
-        let cnt = 0;
-        for (let yy = 0; yy < rows; yy++) for (let xx = 0; xx < cols; xx++) if (flagged[yy][xx]) cnt++;
-        mineLeftEl.textContent = mines - cnt;
-        render();
-        checkWin();
-    }
-
-    function checkWin() {
-        for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-            if (grid[y][x] !== -1 && !revealed[y][x]) return;
-        }
-        gameOver = true;
-        clearInterval(timer);
-        setTimeout(() => alert(`🎉 恭喜通关！用时 ${seconds} 秒`), 100);
-    }
-
-    // 手机模式切换
-    modeToggle.addEventListener('click', e => {
-        const btn = e.target.closest('.mode-btn');
-        if (!btn) return;
-        touchMode = btn.dataset.mode;
-        modeToggle.querySelectorAll('.mode-btn').forEach(b => {
-            b.classList.toggle('active', b === btn);
-        });
     });
+
+    function updateCell(x, y) {
+        const el = gridEl.querySelector(`.lo-cell[data-x="${x}"][data-y="${y}"]`);
+        if (el) el.classList.toggle('on', grid[y][x] === 1);
+    }
 
     document.getElementById('btnNew').onclick = init;
-    document.getElementById('btnLv').onclick = () => {
-        levelIdx = (levelIdx + 1) % LEVELS.length;
-        init();
-    };
 
-    // 窗口大小变化时重绘
     let resizeTimer = null;
     window.addEventListener('resize', () => {
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(render, 200);
     });
 
+    buildLevels();
     init();
     GameBridge.notifyReady();
 })();
