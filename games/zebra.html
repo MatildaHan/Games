@@ -5,22 +5,37 @@
 <title>爱因斯坦谜题</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.zebra-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 900px; }
-.zebra-clues { background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; font-size: 13px; line-height: 1.9; color: var(--text-sub); width: 100%; }
-.zebra-clues b { color: var(--primary-color); }
-.zebra-table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
-.zebra-table th, .zebra-table td { padding: 8px 10px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
-.zebra-table th { background: rgba(0,0,0,0.3); color: var(--primary-color); font-weight: 600; }
+.zebra-wrap { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 900px; }
+.zebra-clues {
+    background: rgba(0,0,0,0.3);
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 13px; line-height: 1.9;
+    color: var(--text-sub);
+}
+.zebra-clues b { color: var(--primary); }
+.zebra-table {
+    width: 100%; border-collapse: collapse;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px; overflow: hidden;
+}
+.zebra-table th, .zebra-table td {
+    padding: 8px 10px; text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 13px;
+}
+.zebra-table th { background: rgba(0,0,0,0.3); color: var(--primary); font-weight: 600; }
 .zebra-table select {
-    background: rgba(30,41,59,0.9); color: var(--text-main);
+    background: rgba(30,41,59,0.9); color: var(--text);
     border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-    padding: 4px 8px; font-size: 13px; cursor: pointer; outline: none;
+    padding: 4px 8px; font-size: 13px; cursor: pointer;
+    outline: none; font-family: inherit; width: 100%;
 }
 .zebra-table select option { background: #1e293b; }
 .zebra-table td.correct { background: rgba(74,222,128,0.25); }
-.zebra-table td.wrong { background: rgba(239,68,68,0.2); }
-.zebra-btns { display: flex; gap: 12px; }
-.zebra-result { color: var(--primary-color); font-weight: bold; font-size: 16px; min-height: 24px; }
+.zebra-table td.wrong { background: rgba(239,68,68,0.15); }
+.zebra-btns { display: flex; gap: 12px; justify-content: center; }
+.zebra-result { color: var(--primary); font-weight: 700; font-size: 15px; min-height: 22px; text-align: center; }
 </style>
 </head>
 <body>
@@ -46,113 +61,141 @@
             15. 抽 Blend 的人有一个喝水的邻居。<br>
             <b>问题：谁养鱼？</b>
         </div>
-        <div id="zebraTable"></div>
+        <div id="tableWrap"></div>
         <div class="zebra-btns">
-            <button class="action-btn" id="btnCheck">检查答案</button>
-            <button class="action-btn outline" id="btnReset">重置</button>
+            <button class="btn" id="btnCheck">检查答案</button>
+            <button class="btn ghost" id="btnHint">提示</button>
+            <button class="btn ghost" id="btnReset">重置</button>
         </div>
-        <div class="zebra-result" id="zebraResult"></div>
+        <div class="zebra-result" id="result"></div>
     </div>
 </div>
+
+<script src="../js/bridge.js"></script>
 <script>
-// 正确答案：
-// 房1: 挪威人 / 黄 / 水 / Dunhill / 猫
-// 房2: 丹麦人 / 蓝 / 茶 / Blend / 马
-// 房3: 英国人 / 红 / 牛奶 / Pall Mall / 鸟
-// 房4: 德国人 / 绿 / 咖啡 / Prince / 鱼
-// 房5: 瑞典人 / 白 / 啤酒 / Blue Master / 狗
-// 养鱼的是德国人
+(function () {
+    'use strict';
 
-const CATEGORIES = {
-    nationality: ['挪威人','丹麦人','英国人','德国人','瑞典人'],
-    color: ['黄色','蓝色','红色','绿色','白色'],
-    drink: ['水','茶','牛奶','咖啡','啤酒'],
-    smoke: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'],
-    pet: ['猫','马','鸟','鱼','狗'],
-};
+    const CATEGORIES = {
+        nationality: ['挪威人','丹麦人','英国人','德国人','瑞典人'],
+        color: ['黄色','蓝色','红色','绿色','白色'],
+        drink: ['水','茶','牛奶','咖啡','啤酒'],
+        smoke: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'],
+        pet: ['猫','马','鸟','鱼','狗']
+    };
 
-const CORRECT = [
-    { nationality:'挪威人', color:'黄色', drink:'水', smoke:'Dunhill', pet:'猫' },
-    { nationality:'丹麦人', color:'蓝色', drink:'茶', smoke:'Blend', pet:'马' },
-    { nationality:'英国人', color:'红色', drink:'牛奶', smoke:'Pall Mall', pet:'鸟' },
-    { nationality:'德国人', color:'绿色', drink:'咖啡', smoke:'Prince', pet:'鱼' },
-    { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' },
-];
+    const LABELS = { nationality:'国籍', color:'颜色', drink:'饮料', smoke:'香烟', pet:'宠物' };
 
-let state = [];
+    const CORRECT = [
+        { nationality:'挪威人', color:'黄色', drink:'水',   smoke:'Dunhill',     pet:'猫' },
+        { nationality:'丹麦人', color:'蓝色', drink:'茶',   smoke:'Blend',       pet:'马' },
+        { nationality:'英国人', color:'红色', drink:'牛奶', smoke:'Pall Mall',   pet:'鸟' },
+        { nationality:'德国人', color:'绿色', drink:'咖啡', smoke:'Prince',      pet:'鱼' },
+        { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' }
+    ];
 
-function init() {
-    state = Array.from({length: 5}, () => ({ nationality:'', color:'', drink:'', smoke:'', pet:'' }));
-    render();
-}
+    let state = [];
+    let revealed = []; // 记录已被提示揭示的格子
+    const wrap = document.getElementById('tableWrap');
+    const resultEl = document.getElementById('result');
 
-function render() {
-    const el = document.getElementById('zebraTable');
-    let html = '<table class="zebra-table"><thead><tr><th>房子</th>';
-    Object.keys(CATEGORIES).forEach(k => {
-        const label = { nationality:'国籍', color:'颜色', drink:'饮料', smoke:'香烟', pet:'宠物' }[k];
-        html += `<th>${label}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-    for (let i = 0; i < 5; i++) {
-        html += `<tr><td><b>第 ${i+1} 栋</b></td>`;
-        Object.keys(CATEGORIES).forEach(k => {
-            html += `<td><select data-house="${i}" data-cat="${k}">`;
-            html += `<option value="">--</option>`;
-            CATEGORIES[k].forEach(opt => {
-                const selected = state[i][k] === opt ? ' selected' : '';
-                html += `<option value="${opt}"${selected}>${opt}</option>`;
-            });
-            html += `</select></td>`;
-        });
-        html += '</tr>';
+    function init() {
+        state = Array.from({ length: 5 }, () => ({ nationality:'', color:'', drink:'', smoke:'', pet:'' }));
+        revealed = Array.from({ length: 5 }, () => ({}));
+        resultEl.textContent = '';
+        render();
     }
-    html += '</tbody></table>';
-    el.innerHTML = html;
-    el.querySelectorAll('select').forEach(sel => {
-        sel.onchange = () => {
-            const h = parseInt(sel.dataset.house);
-            const c = sel.dataset.cat;
-            state[h][c] = sel.value;
-        };
-    });
-}
 
-function check() {
-    // 检查所有格子是否填满
-    for (let i = 0; i < 5; i++) {
+    function render() {
+        let html = '<table class="zebra-table"><thead><tr><th>房子</th>';
+        for (const k of Object.keys(CATEGORIES)) html += `<th>${LABELS[k]}</th>`;
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < 5; i++) {
+            html += `<tr><td><b>第 ${i + 1} 栋</b></td>`;
+            for (const k of Object.keys(CATEGORIES)) {
+                const locked = revealed[i][k];
+                html += `<td class="${locked ? 'correct' : ''}">`;
+                html += `<select data-house="${i}" data-cat="${k}" ${locked ? 'disabled' : ''}>`;
+                html += `<option value="">--</option>`;
+                for (const opt of CATEGORIES[k]) {
+                    const sel = state[i][k] === opt ? ' selected' : '';
+                    html += `<option value="${opt}"${sel}>${opt}</option>`;
+                }
+                html += '</select></td>';
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+
+        wrap.querySelectorAll('select').forEach(sel => {
+            sel.onchange = () => {
+                const h = parseInt(sel.dataset.house, 10);
+                const c = sel.dataset.cat;
+                state[h][c] = sel.value;
+            };
+        });
+    }
+
+    function check() {
+        // 1. 检查是否填满
+        for (let i = 0; i < 5; i++) {
+            for (const k of Object.keys(CATEGORIES)) {
+                if (!state[i][k]) {
+                    resultEl.textContent = '⚠️ 还有格子未填写';
+                    return;
+                }
+            }
+        }
+        // 2. 检查每列不重复
         for (const k of Object.keys(CATEGORIES)) {
-            if (!state[i][k]) {
-                document.getElementById('zebraResult').innerText = '⚠️ 还有格子未填写';
+            const vals = state.map(s => s[k]);
+            if (new Set(vals).size !== 5) {
+                resultEl.textContent = `⚠️ 「${LABELS[k]}」列有重复`;
                 return;
             }
         }
+        // 3. 全部正确？
+        let allCorrect = true;
+        for (let i = 0; i < 5; i++) {
+            for (const k of Object.keys(CATEGORIES)) {
+                if (state[i][k] !== CORRECT[i][k]) allCorrect = false;
+            }
+        }
+        resultEl.textContent = allCorrect
+            ? '🎉 完全正确！养鱼的是德国人。'
+            : '❌ 答案有误，请再想想。';
     }
-    // 检查每列是否重复
-    for (const k of Object.keys(CATEGORIES)) {
-        const vals = state.map(s => s[k]);
-        if (new Set(vals).size !== 5) {
-            document.getElementById('zebraResult').innerText = `⚠️ 「${k}」列有重复项`;
+
+    function hint() {
+        // 找出所有尚未正确填写的位置
+        const empty = [];
+        for (let i = 0; i < 5; i++) {
+            for (const k of Object.keys(CATEGORIES)) {
+                if (state[i][k] !== CORRECT[i][k]) {
+                    empty.push({ house: i, cat: k });
+                }
+            }
+        }
+        if (empty.length === 0) {
+            resultEl.textContent = '已经全部正确，无需提示。';
             return;
         }
+        const slot = empty[Math.floor(Math.random() * empty.length)];
+        state[slot.house][slot.cat] = CORRECT[slot.house][slot.cat];
+        revealed[slot.house][slot.cat] = true;
+        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${LABELS[slot.cat]}」`;
+        render();
     }
-    // 检查是否正确
-    let allCorrect = true;
-    for (let i = 0; i < 5; i++) {
-        for (const k of Object.keys(CATEGORIES)) {
-            if (state[i][k] !== CORRECT[i][k]) allCorrect = false;
-        }
-    }
-    if (allCorrect) {
-        document.getElementById('zebraResult').innerText = '🎉 完全正确！养鱼的是德国人。';
-    } else {
-        document.getElementById('zebraResult').innerText = '❌ 答案有误，请再想想。';
-    }
-}
 
-document.getElementById('btnCheck').onclick = check;
-document.getElementById('btnReset').onclick = init;
-init();
+    document.getElementById('btnCheck').onclick = check;
+    document.getElementById('btnHint').onclick = hint;
+    document.getElementById('btnReset').onclick = init;
+
+    init();
+    GameBridge.notifyReady();
+})();
 </script>
 </body>
 </html>
