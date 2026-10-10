@@ -5,58 +5,263 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>俄罗斯方块</title>
 <link rel="stylesheet" href="../css/common.css">
+<!-- 像素字体 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   像素复古主题
+   ============================================================ */
+:root {
+    /* 8-bit 色板 */
+    --px-bg:        #0b0e1a;   /* 深蓝黑 */
+    --px-bg-2:      #141a2e;   /* 稍浅 */
+    --px-panel:     #1a2140;   /* 面板 */
+    --px-panel-2:   #222a52;   /* 面板亮 */
+    --px-border:    #3a4a7a;   /* 边框 */
+    --px-border-hi: #6a7ec4;   /* 边框高光 */
+    --px-grid:      #2a3456;   /* 网格线 */
+    --px-text:      #e8f0ff;   /* 主文字 */
+    --px-text-dim:  #8a9ac4;   /* 次文字 */
+    --px-accent:    #f7d51d;   /* 亮黄 */
+
+    /* 方块色（8-bit 高饱和） */
+    --blk-cyan:    #00e0e0;
+    --blk-yellow:  #f7d51d;
+    --blk-purple:  #a020f0;
+    --blk-green:   #00c020;
+    --blk-red:     #e03030;
+    --blk-blue:    #2060f0;
+    --blk-orange:  #f08000;
+}
+
+/* 像素字体 fallback */
+* {
+    font-family: "Press Start 2P", "Courier New", monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* 覆盖 common.css 里的圆角 */
 .tetris-layout {
     display: grid;
-    grid-template-columns: 160px auto 180px;
+    grid-template-columns: 180px auto 200px;
     gap: 24px;
     align-items: flex-start;
     width: 100%;
     justify-content: center;
 }
-.tetris-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.tetris-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* ============================================================
+   像素卡片（面板）
+   ============================================================ */
+.px-card {
+    background: var(--px-panel);
+    border: 3px solid var(--px-border);
+    box-shadow:
+        inset 0 0 0 3px var(--px-bg),
+        inset 0 0 0 6px var(--px-panel-2),
+        0 0 0 3px var(--px-bg),
+        6px 6px 0 0 rgba(0, 0, 0, 0.5);
+    padding: 16px;
+    border-radius: 0;              /* 无圆角 */
+    position: relative;
+}
+.px-card .card-title {
+    font-size: 10px;
+    color: var(--px-text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+.px-card .card-value {
+    font-size: 20px;
+    color: var(--px-accent);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #000;
+}
+
+/* ============================================================
+   画布
+   ============================================================ */
 #tetris-canvas {
     display: block;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+    background: #000;
+    border: 4px solid var(--px-border);
+    box-shadow:
+        inset 0 0 0 4px var(--px-bg),
+        0 0 0 4px var(--px-bg),
+        8px 8px 0 0 rgba(0, 0, 0, 0.6);
     max-width: 100%;
     height: auto;
     touch-action: none;
+    image-rendering: pixelated;
 }
-#next-canvas { display: block; margin: 0 auto; max-width: 100%; height: auto; }
-.btn-rotate { height: 68px; font-size: 18px; }
+#next-canvas {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+    background: #000;
+    border: 2px solid var(--px-border);
+    image-rendering: pixelated;
+}
 
+/* ============================================================
+   像素按钮
+   ============================================================ */
+.px-btn {
+    background: var(--px-panel-2);
+    color: var(--px-text);
+    border: 3px solid var(--px-border);
+    box-shadow:
+        inset -3px -3px 0 0 rgba(0, 0, 0, 0.5),
+        inset 3px 3px 0 0 var(--px-border-hi),
+        0 0 0 3px var(--px-bg),
+        4px 4px 0 0 rgba(0, 0, 0, 0.6);
+    padding: 12px 16px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 0;
+    font-family: inherit;
+    min-height: 44px;
+    text-transform: uppercase;
+    transition: transform 0.05s, box-shadow 0.05s;
+    width: 100%;
+}
+.px-btn:hover:not(:disabled) {
+    background: var(--px-border);
+    color: #fff;
+}
+.px-btn:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow:
+        inset -3px -3px 0 0 rgba(0, 0, 0, 0.5),
+        inset 3px 3px 0 0 var(--px-border-hi),
+        0 0 0 3px var(--px-bg),
+        1px 1px 0 0 rgba(0, 0, 0, 0.6);
+}
+.px-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: var(--px-text-dim);
+}
+.px-btn.primary {
+    background: var(--px-accent);
+    color: #000;
+    border-color: #8a6a00;
+}
+.px-btn.primary:hover:not(:disabled) {
+    background: #fff;
+}
+.px-btn.tall {
+    height: 80px;
+    font-size: 12px;
+}
+
+/* ============================================================
+   移动端触屏按钮
+   ============================================================ */
 .touch-controls {
     display: none;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     width: 100%;
-    max-width: 320px;
+    max-width: 360px;
     margin: 12px auto 0;
 }
-.touch-btn {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: var(--text);
-    border-radius: 10px;
+.px-touch-btn {
+    background: var(--px-panel-2);
+    border: 3px solid var(--px-border);
+    box-shadow:
+        inset -3px -3px 0 0 rgba(0, 0, 0, 0.5),
+        inset 3px 3px 0 0 var(--px-border-hi),
+        0 0 0 3px var(--px-bg);
+    color: var(--px-text);
     height: 56px;
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    user-select: none;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    touch-action: manipulation;
     font-family: inherit;
+    touch-action: manipulation;
 }
-.touch-btn:active { background: var(--primary-mid); }
+.px-touch-btn:active {
+    transform: translate(2px, 2px);
+    background: var(--px-border);
+}
 
-@media (max-width: 1023px) {
-    .tetris-layout { grid-template-columns: 130px auto 150px; gap: 16px; }
+/* ============================================================
+   说明面板
+   ============================================================ */
+.px-help {
+    font-size: 8px;
+    line-height: 1.8;
+    color: var(--px-text-dim);
+    letter-spacing: 0.5px;
 }
+.px-help .key {
+    color: var(--px-accent);
+    background: var(--px-bg);
+    padding: 1px 4px;
+    border: 1px solid var(--px-border);
+}
+
+/* ============================================================
+   背景：CRT 深空 + 网格
+   ============================================================ */
+body.embedded {
+    background:
+        radial-gradient(ellipse at center, #1a2140 0%, #0b0e1a 70%),
+        #0b0e1a;
+}
+body.embedded::before {
+    background-image:
+        linear-gradient(rgba(58, 74, 122, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58, 74, 122, 0.15) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
+
+/* 扫描线效果（可选） */
+body.embedded::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    opacity: 0.35;
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 1023px) {
+    .tetris-layout {
+        grid-template-columns: 140px auto 160px;
+        gap: 16px;
+    }
+}
+
 @media (max-width: 767px) {
     .tetris-layout {
         grid-template-columns: 1fr;
@@ -71,20 +276,52 @@
         width: 100%;
         gap: 8px;
     }
-    .tetris-side .card {
+    .tetris-side .px-card {
         flex: 1 1 100px;
         min-width: 100px;
         padding: 8px;
         text-align: center;
     }
-    .tetris-side .card .card-title { font-size: 11px; margin-bottom: 4px; }
-    .tetris-side .card .card-value { font-size: 18px; }
-    .tetris-side .card canvas { width: 70px; height: 70px; }
+    .tetris-side .px-card .card-title { font-size: 8px; margin-bottom: 4px; }
+    .tetris-side .px-card .card-value { font-size: 14px; }
     .tetris-side #btnStart { flex: 1 1 100%; }
-    .tetris-side .btn-rotate { display: none; }
-    .tetris-side .card:last-child { display: none; }
+    .tetris-side .px-btn.tall { display: none; }
+    .tetris-side .px-help { display: none; }
     .touch-controls { display: grid; }
     #tetris-canvas { width: auto; max-height: 45vh; }
+}
+
+/* ============================================================
+   像素模态弹窗（覆盖 common.css 的圆角 modal）
+   ============================================================ */
+.modal-box {
+    background: var(--px-panel);
+    border: 4px solid var(--px-border);
+    box-shadow:
+        inset 0 0 0 3px var(--px-bg),
+        0 0 0 4px var(--px-bg),
+        8px 8px 0 0 rgba(0, 0, 0, 0.6);
+    border-radius: 0;
+    padding: 32px 40px;
+    font-family: inherit;
+}
+.modal-box h2 {
+    color: var(--px-accent);
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 #000;
+    margin-bottom: 16px;
+}
+.modal-box p {
+    color: var(--px-text-dim);
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+.modal-box .big-value {
+    color: #fff;
+    font-size: 28px;
+    text-shadow: 3px 3px 0 var(--px-border);
+    font-weight: 700;
 }
 </style>
 </head>
@@ -92,53 +329,55 @@
 <div class="game-inner">
     <div class="tetris-layout">
         <div class="tetris-side">
-            <div class="card" style="text-align:center;">
-                <div class="card-title">下一个</div>
+            <div class="px-card" style="text-align:center;">
+                <div class="card-title">NEXT</div>
                 <canvas id="next-canvas" width="120" height="120"></canvas>
             </div>
-            <div class="card" style="text-align:center;">
-                <div class="card-title">得分</div>
+            <div class="px-card" style="text-align:center;">
+                <div class="card-title">SCORE</div>
                 <div class="card-value" id="score">0</div>
             </div>
-            <div class="card" style="text-align:center;">
-                <div class="card-title">等级 / 最高</div>
-                <div class="card-value" style="font-size:16px;" id="level">1 / 0</div>
+            <div class="px-card" style="text-align:center;">
+                <div class="card-title">LEVEL / BEST</div>
+                <div class="card-value" style="font-size:14px;" id="level">1 / 0</div>
             </div>
-            <button class="btn" id="btnStart">开始游戏</button>
+            <button class="px-btn primary" id="btnStart">START</button>
         </div>
 
         <canvas id="tetris-canvas" width="240" height="480"></canvas>
 
         <div class="tetris-side">
-            <button class="btn ghost btn-rotate" id="btnRotate">↻ 旋转</button>
-            <button class="btn ghost" id="btnPause" style="height: 44px;">⏸ 暂停</button>
-            <div class="card" style="font-size:12px; line-height:1.7; color:var(--text-sub);">
-                <div class="card-title">操作</div>
-                ← → 移动<br>
-                ↑ 旋转<br>
-                ↓ 加速<br>
-                空格 落底<br>
-                P 暂停
+            <button class="px-btn tall" id="btnRotate">ROTATE</button>
+            <button class="px-btn" id="btnPause" style="height: 44px;">PAUSE</button>
+            <div class="px-card">
+                <div class="card-title">KEYS</div>
+                <div class="px-help">
+                    <span class="key">←→</span> MOVE<br>
+                    <span class="key">↑</span> ROTATE<br>
+                    <span class="key">↓</span> SOFT DROP<br>
+                    <span class="key">SPACE</span> HARD DROP<br>
+                    <span class="key">P</span> PAUSE
+                </div>
             </div>
         </div>
     </div>
 
     <div class="touch-controls" id="touchControls">
-        <button class="touch-btn" data-action="left">←</button>
-        <button class="touch-btn" data-action="rotate">↻</button>
-        <button class="touch-btn" data-action="right">→</button>
-        <button class="touch-btn" data-action="down">↓</button>
+        <button class="px-touch-btn" data-action="left">←</button>
+        <button class="px-touch-btn" data-action="rotate">↻</button>
+        <button class="px-touch-btn" data-action="right">→</button>
+        <button class="px-touch-btn" data-action="down">↓</button>
     </div>
 </div>
 
-<!-- 模态框放 body 直接子级（不在 .game-inner 内） -->
+<!-- 模态框 -->
 <div class="modal" id="modal">
     <div class="modal-box">
-        <h2 id="modalTitle">游戏结束</h2>
-        <p id="modalSub">最终得分<span class="big-value" id="finalScore">0</span></p>
+        <h2 id="modalTitle">GAME OVER</h2>
+        <p id="modalSub">FINAL SCORE<span class="big-value" id="finalScore">0</span></p>
         <div class="modal-actions">
-            <button class="btn" id="btnRestart">重新开始</button>
-            <button class="btn ghost" id="btnLeave">关闭</button>
+            <button class="px-btn primary" id="btnRestart">RESTART</button>
+            <button class="px-btn" id="btnLeave">CLOSE</button>
         </div>
     </div>
 </div>
@@ -148,30 +387,29 @@
 (function () {
     'use strict';
 
-    // 补 body 的 embedded 类（防止忘了改 HTML）
     document.body.classList.add('embedded');
+    GameBridge.notifyReady();
 
     const COLS = 10, ROWS = 20, BLOCK = 24;
     const BASE_INTERVAL = 800;
     const MIN_INTERVAL = 100;
 
-    // 真正的 7 种方块
+    // 8-bit 色板（方块）
     const PIECES = [
-        { shape: [[1,1,1,1]], color: '#FDF6E3' },        // I 奶油黄
-        { shape: [[1,1],[1,1]], color: '#E6E6FA' },      // O 淡紫
-        { shape: [[0,1,0],[1,1,1]], color: '#F8F9FA' },  // T 栀子白
-        { shape: [[0,1,1],[1,1,0]], color: '#E0F7FA' },  // S 浅空蓝
-        { shape: [[1,1,0],[0,1,1]], color: '#FCE4EC' },  // Z 幽兰粉
-        { shape: [[1,0,0],[1,1,1]], color: '#E8F5E9' },  // J 芦草绿
-        { shape: [[0,0,1],[1,1,1]], color: '#B2DFDB' }   // L 海雾青
+        { shape: [[1,1,1,1]], color: '#00e0e0' },        // I 青
+        { shape: [[1,1],[1,1]], color: '#f7d51d' },      // O 黄
+        { shape: [[0,1,0],[1,1,1]], color: '#a020f0' },  // T 紫
+        { shape: [[0,1,1],[1,1,0]], color: '#00c020' },  // S 绿
+        { shape: [[1,1,0],[0,1,1]], color: '#e03030' },  // Z 红
+        { shape: [[1,0,0],[1,1,1]], color: '#2060f0' },  // J 蓝
+        { shape: [[0,0,1],[1,1,1]], color: '#f08000' }   // L 橙
     ];
 
-    // ---------- 7-bag 随机 ----------
+    // 7-bag 随机
     let bag = [];
     function nextFromBag() {
         if (bag.length === 0) {
             bag = PIECES.map((_, i) => i);
-            // Fisher-Yates 洗牌
             for (let i = bag.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [bag[i], bag[j]] = [bag[j], bag[i]];
@@ -180,7 +418,7 @@
         return PIECES[bag.pop()];
     }
 
-    // ---------- Canvas 初始化（含 devicePixelRatio） ----------
+    // Canvas + DPR
     const canvas = document.getElementById('tetris-canvas');
     const ctx = canvas.getContext('2d');
     const nextCanvas = document.getElementById('next-canvas');
@@ -195,20 +433,10 @@
         c.style.width = w + 'px';
         c.style.height = h + 'px';
         context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        context.imageSmoothingEnabled = false;
     }
 
-    function safeRoundRect(ctx, x, y, w, h, r) {
-        if (typeof ctx.roundRect === 'function') {
-            ctx.beginPath();
-            ctx.roundRect(x, y, w, h, r);
-        } else {
-            // 降级为普通矩形
-            ctx.beginPath();
-            ctx.rect(x, y, w, h);
-        }
-    }
-
-    // ---------- 状态 ----------
+    // 状态
     const scoreEl = document.getElementById('score');
     const levelEl = document.getElementById('level');
     const btnStart = document.getElementById('btnStart');
@@ -217,7 +445,6 @@
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
     const modalSub = document.getElementById('modalSub');
-    const finalScoreEl = document.getElementById('finalScore');
     const btnRestart = document.getElementById('btnRestart');
     const btnLeave = document.getElementById('btnLeave');
     const touchControls = document.getElementById('touchControls');
@@ -225,7 +452,6 @@
     let board, score, level, lines, current, next, dropCounter, lastTime, rafId, state;
     let bestScore = 0;
     try { bestScore = parseInt(localStorage.getItem('tetrisBest') || '0', 10) || 0; } catch (e) {}
-    // state: 'idle' | 'running' | 'paused' | 'over'
 
     function reset() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -240,8 +466,7 @@
         if (rafId) cancelAnimationFrame(rafId);
         scoreEl.textContent = '0';
         updateLevelUI();
-        btnStart.textContent = '开始游戏';
-        btnStart.onclick = start;
+        btnStart.textContent = 'START';
         btnStart.disabled = false;
         btnPause.disabled = true;
         modal.classList.remove('show');
@@ -324,7 +549,6 @@
         if (!current || state !== 'running') return;
         const rotated = current.shape[0].map((_, i) => current.shape.map(r => r[i]).reverse());
         const oldShape = current.shape;
-        // 尝试踢墙：0, -1, +1, -2, +2 偏移
         const kicks = [0, -1, 1, -2, 2];
         for (const dx of kicks) {
             if (!collide(rotated, current.x + dx, current.y)) {
@@ -334,7 +558,6 @@
                 return;
             }
         }
-        // 都不行，撤销
         current.shape = oldShape;
     }
 
@@ -365,16 +588,31 @@
         draw();
     }
 
+    // ============================================================
+    // 绘制（像素风：硬边 + 高光 + 阴影）
+    // ============================================================
     function draw() {
         ctx.clearRect(0, 0, 240, 480);
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        // 背景
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 240, 480);
+
+        // 网格（暗绿色细线，CRT 感）
+        ctx.strokeStyle = 'rgba(58, 74, 122, 0.35)';
         ctx.lineWidth = 1;
         for (let i = 1; i < COLS; i++) {
-            ctx.beginPath(); ctx.moveTo(i * BLOCK, 0); ctx.lineTo(i * BLOCK, 480); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(i * BLOCK + 0.5, 0);
+            ctx.lineTo(i * BLOCK + 0.5, 480);
+            ctx.stroke();
         }
         for (let i = 1; i < ROWS; i++) {
-            ctx.beginPath(); ctx.moveTo(0, i * BLOCK); ctx.lineTo(240, i * BLOCK); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i * BLOCK + 0.5);
+            ctx.lineTo(240, i * BLOCK + 0.5);
+            ctx.stroke();
         }
+
         board.forEach((row, y) => row.forEach((c, x) => { if (c) drawBlock(x, y, c); }));
         if (current) {
             current.shape.forEach((row, y) => row.forEach((v, x) => {
@@ -383,21 +621,34 @@
         }
     }
 
+    // 像素方块：外框 + 内高光（左上）+ 内阴影（右下）
     function drawBlock(x, y, color) {
         const px = x * BLOCK, py = y * BLOCK;
+        const S = BLOCK;
+        // 主色
         ctx.fillStyle = color;
-        safeRoundRect(ctx, px + 1, py + 1, BLOCK - 2, BLOCK - 2, 4);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-        ctx.stroke();
-        // 顶部高光
-        ctx.fillStyle = 'rgba(255,255,255,0.55)';
-        safeRoundRect(ctx, px + 1, py + 1, BLOCK - 2, 4, [4,4,0,0]);
-        ctx.fill();
+        ctx.fillRect(px, py, S, S);
+
+        // 左上高光（3px）
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.fillRect(px, py, S, 3);              // 顶
+        ctx.fillRect(px, py, 3, S);              // 左
+
+        // 右下阴影（3px）
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fillRect(px, py + S - 3, S, 3);      // 底
+        ctx.fillRect(px + S - 3, py, 3, S);      // 右
+
+        // 极简像素描边（1px 外框）
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, S - 1, S - 1);
     }
 
     function drawNext() {
         nextCtx.clearRect(0, 0, 120, 120);
+        nextCtx.fillStyle = '#000';
+        nextCtx.fillRect(0, 0, 120, 120);
         if (!next) return;
         const shape = next.shape;
         const bs = 24;
@@ -405,11 +656,21 @@
         const oy = (120 - shape.length * bs) / 2;
         shape.forEach((row, y) => row.forEach((v, x) => {
             if (!v) return;
+            const px = ox + x * bs, py = oy + y * bs;
             nextCtx.fillStyle = next.color;
-            safeRoundRect(nextCtx, ox + x * bs, oy + y * bs, bs - 2, bs - 2, 4);
-            nextCtx.fill();
-            nextCtx.strokeStyle = 'rgba(0,0,0,0.25)';
-            nextCtx.stroke();
+            nextCtx.fillRect(px, py, bs - 2, bs - 2);
+            // 高光
+            nextCtx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            nextCtx.fillRect(px, py, bs - 2, 3);
+            nextCtx.fillRect(px, py, 3, bs - 2);
+            // 阴影
+            nextCtx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            nextCtx.fillRect(px, py + bs - 5, bs - 2, 3);
+            nextCtx.fillRect(px + bs - 5, py, 3, bs - 2);
+            // 描边
+            nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+            nextCtx.lineWidth = 1;
+            nextCtx.strokeRect(px + 0.5, py + 0.5, bs - 3, bs - 3);
         }));
     }
 
@@ -432,7 +693,7 @@
         lastTime = 0;
         dropCounter = 0;
         rafId = requestAnimationFrame(loop);
-        btnStart.textContent = '重新开始';
+        btnStart.textContent = 'RESTART';
         btnPause.disabled = false;
     }
 
@@ -440,7 +701,7 @@
         if (state === 'running') {
             state = 'paused';
             if (rafId) cancelAnimationFrame(rafId);
-            showModal('已暂停', '点击继续继续游戏', '继续', '关闭');
+            showModal('PAUSED', '点击继续继续游戏', 'RESUME', 'CLOSE');
             btnRestart.onclick = resume;
             btnLeave.onclick = () => { modal.classList.remove('show'); leave(); };
         }
@@ -457,15 +718,17 @@
     function endGame() {
         state = 'over';
         if (rafId) cancelAnimationFrame(rafId);
-        finalScoreEl.textContent = score;
-        showModal('游戏结束', '最终得分', '重新开始', '关闭');
+        showModal('GAME OVER', 'FINAL SCORE', 'RESTART', 'CLOSE');
         btnRestart.onclick = start;
         btnLeave.onclick = () => { modal.classList.remove('show'); leave(); };
     }
 
-    function showModal(title, sub, restartText, leaveText) {
+    function showModal(title, sub, restartText, leaveText, bigValue) {
         modalTitle.textContent = title;
-        modalSub.innerHTML = sub + '<span class="big-value" id="finalScore">' + (sub === '最终得分' ? score : '') + '</span>';
+        // 保留 #finalScore 节点
+        modalSub.innerHTML = sub + '<span class="big-value" id="finalScore"></span>';
+        const el = modalSub.querySelector('#finalScore');
+        if (bigValue !== null && bigValue !== undefined) el.textContent = bigValue;
         btnRestart.textContent = restartText;
         btnLeave.textContent = leaveText;
         modal.classList.add('show');
@@ -476,7 +739,7 @@
         reset();
     }
 
-    // ---------- 事件 ----------
+    // 事件
     btnStart.onclick = start;
     btnRotate.addEventListener('click', rotate);
     btnPause.addEventListener('click', pause);
@@ -484,7 +747,7 @@
     btnLeave.addEventListener('click', leave);
 
     touchControls.addEventListener('click', (e) => {
-        const btn = e.target.closest('.touch-btn');
+        const btn = e.target.closest('.px-touch-btn');
         if (!btn) return;
         const action = btn.dataset.action;
         if (action === 'left') move(-1);
@@ -493,7 +756,7 @@
         else if (action === 'rotate') rotate();
     });
 
-    // 触屏滑动手势
+    // 滑动手势
     let touchStartX = 0, touchStartY = 0, touchMoved = false;
     canvas.addEventListener('touchstart', (e) => {
         if (state !== 'running') return;
@@ -533,7 +796,7 @@
         if (state !== 'running') return;
         const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
         if (keys.includes(e.key)) e.preventDefault();
-        if (e.repeat) return; // 过滤按住不放
+        if (e.repeat) return;
         switch (e.key) {
             case 'ArrowLeft': move(-1); break;
             case 'ArrowRight': move(1); break;
@@ -547,13 +810,11 @@
         if (msg.type === 'pause' && state === 'running') pause();
     });
 
-    // 页面不可见时自动暂停
     GameBridge.onVisibilityChange((hidden) => {
         if (hidden && state === 'running') pause();
     });
 
     reset();
-    GameBridge.notifyReady();
 })();
 </script>
 </body>
