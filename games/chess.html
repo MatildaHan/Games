@@ -6,10 +6,36 @@
 <title>中国象棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
+/* 水墨主题 */
+body.ink-theme {
+    background-color: #F5EFE0;
+    background-image:
+        repeating-linear-gradient(95deg,
+            rgba(180, 160, 120, 0.05) 0px,
+            rgba(180, 160, 120, 0.05) 1px,
+            transparent 1px,
+            transparent 4px),
+        repeating-linear-gradient(175deg,
+            rgba(160, 140, 100, 0.04) 0px,
+            rgba(160, 140, 100, 0.04) 1px,
+            transparent 1px,
+            transparent 6px),
+        radial-gradient(ellipse 60% 40% at 20% 15%,
+            rgba(80, 70, 50, 0.08) 0%,
+            transparent 70%),
+        radial-gradient(ellipse 50% 40% at 85% 90%,
+            rgba(80, 70, 50, 0.06) 0%,
+            transparent 70%),
+        linear-gradient(180deg, #F5EFE0 0%, #EBE2CE 100%);
+    color: #1A1A1A;
+    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
+}
+body.ink-theme::before { display: none; }
+
 .chess-layout {
     display: grid;
     grid-template-columns: auto 200px;
-    gap: 20px;
+    gap: 24px;
     align-items: flex-start;
     justify-content: center;
     width: 100%;
@@ -17,73 +43,83 @@
 .chess-board-wrap { display: flex; justify-content: center; align-items: center; }
 
 /* ============================================================
-   棋盘
+   棋盘：宣纸底 + 淡墨格线
    ============================================================ */
 .chess-board {
     position: relative;
     display: grid;
     grid-template-columns: repeat(9, var(--cell, 52px));
     grid-template-rows: repeat(10, var(--cell, 52px));
+    /* 宣纸底 */
     background:
-        radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 65%),
-        radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(60,70,55,0.22) 100%),
-        repeating-linear-gradient(115deg,
-            rgba(120,130,110,0.05) 0px,
-            rgba(120,130,110,0.05) 2px,
-            transparent 2px,
+        radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(0,0,0,0) 70%),
+        /* 纸张纤维 */
+        repeating-linear-gradient(95deg,
+            rgba(180, 160, 120, 0.06) 0px,
+            rgba(180, 160, 120, 0.06) 1px,
+            transparent 1px,
+            transparent 3px),
+        repeating-linear-gradient(175deg,
+            rgba(160, 140, 100, 0.04) 0px,
+            rgba(160, 140, 100, 0.04) 1px,
+            transparent 1px,
             transparent 5px),
-        repeating-linear-gradient(35deg,
-            rgba(80,90,70,0.04) 0px,
-            rgba(80,90,70,0.04) 3px,
-            transparent 3px,
-            transparent 7px),
-        linear-gradient(135deg, #b5bca6 0%, #a9b19a 50%, #9ba38d 100%);
-    border: 6px solid #c9c2a4;
-    border-radius: 4px;
+        linear-gradient(135deg, #F5EFE0 0%, #EBE2CE 60%, #E0D3B5 100%);
+    /* 木质外框（深墨棕） */
+    border: 12px solid #3A2E1F;
+    border-radius: 2px;
     box-shadow:
-        0 0 0 4px #5c6b4a,
-        0 0 0 6px #3a4530,
-        inset 0 0 0 2px #8a9478,
-        inset 0 0 60px rgba(60,70,55,0.35),
-        0 12px 32px rgba(0,0,0,0.5),
-        0 3px 8px rgba(0,0,0,0.35);
+        /* 内圈金线 */
+        inset 0 0 0 1px #C9A961,
+        inset 0 0 0 2px rgba(44, 44, 44, 0.6),
+        /* 纸张暗角 */
+        inset 0 0 60px rgba(120, 90, 40, 0.2),
+        /* 外阴影 */
+        0 10px 30px rgba(44, 30, 10, 0.35),
+        0 2px 6px rgba(44, 30, 10, 0.25);
     background-clip: padding-box;
     touch-action: manipulation;
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
     box-sizing: content-box;
 }
 
-/* 棋盘格线 */
+/* 木框纹理 */
 .chess-board::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 2px;
+    background:
+        repeating-linear-gradient(92deg,
+            rgba(0,0,0,0.12) 0px,
+            rgba(0,0,0,0.12) 1px,
+            transparent 1px,
+            transparent 4px),
+        linear-gradient(180deg, #4A3A28 0%, #2E2418 50%, #3A2E1F 100%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 棋盘格线（淡墨） */
+.chess-board::after {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     background-image:
-        linear-gradient(to right, #5f6b54 1px, transparent 1px),
-        linear-gradient(to bottom, #5f6b54 1px, transparent 1px);
+        linear-gradient(to right, rgba(44, 44, 44, 0.6) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(44, 44, 44, 0.6) 1px, transparent 1px);
     background-size:
         var(--cell) var(--cell),
         var(--cell) var(--cell);
     background-position:
         calc(var(--cell) / 2) 0,
         0 calc(var(--cell) / 2);
-    opacity: 0.55;
+    opacity: 0.75;
 }
 
-/* 内圈描线 */
-.chess-board::after {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    border: 1px solid rgba(200, 190, 150, 0.55);
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* 九宫斜线：用 data URI 背景，不受 --cell 初始化影响 */
+/* 九宫斜线（墨色细线） */
 .chess-board .palace-top,
 .chess-board .palace-bottom {
     position: absolute;
@@ -92,15 +128,14 @@
     left: calc(var(--cell) * 3);
     pointer-events: none;
     z-index: 2;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><line x1='0' y1='0' x2='100' y2='100' stroke='%236a7258' stroke-width='1.5' vector-effect='non-scaling-stroke'/><line x1='100' y1='0' x2='0' y2='100' stroke='%236a7258' stroke-width='1.5' vector-effect='non-scaling-stroke'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><line x1='0' y1='0' x2='100' y2='100' stroke='%232C2C2C' stroke-width='1.5' vector-effect='non-scaling-stroke' opacity='0.7'/><line x1='100' y1='0' x2='0' y2='100' stroke='%232C2C2C' stroke-width='1.5' vector-effect='non-scaling-stroke' opacity='0.7'/></svg>");
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    opacity: 0.8;
 }
 .chess-board .palace-top { top: 0; }
 .chess-board .palace-bottom { bottom: 0; }
 
-/* 楚河汉界 */
+/* 楚河汉界：毛笔字效果 */
 .chess-river {
     position: absolute;
     left: 0;
@@ -110,20 +145,23 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12%;
+    padding: 0 10%;
     font-family: "KaiTi", "STKaiti", serif;
-    font-size: calc(var(--cell) * 0.7);
-    color: #4a5340;
+    font-size: calc(var(--cell) * 0.85);
+    color: #2C2C2C;
     pointer-events: none;
     user-select: none;
     z-index: 2;
     font-weight: 700;
     letter-spacing: 0.15em;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+    opacity: 0.75;
+    text-shadow:
+        0 1px 0 rgba(255,255,255,0.4),
+        1px 0 1px rgba(255,255,255,0.2);
 }
 
 /* ============================================================
-   棋子
+   棋子：白瓷 / 墨玉
    ============================================================ */
 .chess-cell {
     position: relative;
@@ -137,133 +175,217 @@
 }
 
 .chess-piece {
-    width: calc(var(--cell, 52px) * 0.88);
-    height: calc(var(--cell, 52px) * 0.88);
+    width: calc(var(--cell, 52px) * 0.9);
+    height: calc(var(--cell, 52px) * 0.9);
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
     font-weight: 700;
-    font-size: calc(var(--cell, 52px) * 0.46);
+    font-size: calc(var(--cell, 52px) * 0.5);
     line-height: 1;
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    /* 默认（红方）：白瓷 */
     background:
-        radial-gradient(circle at 50% 50%,
-            #fcf1d4 0%,
-            #f8e8b8 40%,
-            #eed89c 65%,
-            #d9be78 85%,
-            #c0a45e 100%);
+        radial-gradient(circle at 40% 35%,
+            #FFFFFF 0%,
+            #FAF6EC 40%,
+            #EFE6CE 70%,
+            #DDD0B3 100%);
     box-shadow:
-        0 2px 4px rgba(0,0,0,0.35),
-        0 1px 1px rgba(0,0,0,0.25),
-        inset 0 1px 1px rgba(255,255,255,0.95),
-        inset 0 -3px 6px rgba(140, 100, 30, 0.35);
+        0 2px 5px rgba(44, 30, 10, 0.4),
+        0 1px 2px rgba(44, 30, 10, 0.3),
+        inset 0 1px 2px rgba(255,255,255,0.95),
+        inset 0 -3px 5px rgba(120, 90, 40, 0.25);
 }
 
+/* 内圈细线（墨色） */
 .chess-piece::before {
     content: '';
     position: absolute;
-    inset: 4%;
+    inset: 5%;
     border-radius: 50%;
+    border: 1.5px solid rgba(44, 44, 44, 0.65);
     pointer-events: none;
 }
+/* 内圈再一层 */
 .chess-piece::after {
     content: '';
     position: absolute;
-    inset: 16%;
+    inset: 15%;
     border-radius: 50%;
-    border: 1.5px solid currentColor;
+    border: 1px solid currentColor;
     opacity: 0.5;
     pointer-events: none;
 }
 
-.chess-cell.red .chess-piece { color: #b81c1c; }
+/* 红方：朱红字 + 印泥红描边 */
+.chess-cell.red .chess-piece {
+    color: #B83B3B;
+}
 .chess-cell.red .chess-piece::before {
-    box-shadow:
-        inset 0 0 0 2px #9a4030,
-        inset 0 0 0 4px #c7a566;
+    border-color: rgba(184, 59, 59, 0.75);
 }
 
-.chess-cell.black .chess-piece { color: #1a1a1a; }
+/* 黑方：焦墨字 + 墨色描边 + 深瓷底 */
+.chess-cell.black .chess-piece {
+    color: #1A1A1A;
+    background:
+        radial-gradient(circle at 40% 35%,
+            #F0E8D2 0%,
+            #E5DAB8 40%,
+            #D0C29A 75%,
+            #B5A67A 100%);
+    box-shadow:
+        0 2px 5px rgba(44, 30, 10, 0.45),
+        0 1px 2px rgba(44, 30, 10, 0.35),
+        inset 0 1px 2px rgba(255,255,255,0.85),
+        inset 0 -3px 5px rgba(80, 60, 20, 0.35);
+}
 .chess-cell.black .chess-piece::before {
-    box-shadow:
-        inset 0 0 0 2px #2c2c2c,
-        inset 0 0 0 4px #c7a566;
+    border-color: rgba(26, 26, 26, 0.8);
 }
 
+/* 选中：朱红印章外圈 */
 .chess-cell.selected .chess-piece {
     transform: translateY(-2px) scale(1.06);
     box-shadow:
-        0 4px 8px rgba(0,0,0,0.45),
-        0 2px 3px rgba(0,0,0,0.3),
-        inset 0 1px 1px rgba(255,255,255,0.95),
-        inset 0 -3px 6px rgba(140, 100, 30, 0.35),
-        0 0 0 3px rgba(212, 175, 55, 0.85);
+        0 4px 8px rgba(44, 30, 10, 0.5),
+        0 2px 3px rgba(44, 30, 10, 0.35),
+        inset 0 1px 2px rgba(255,255,255,0.95),
+        inset 0 -3px 5px rgba(120, 90, 40, 0.25),
+        0 0 0 3px rgba(184, 59, 59, 0.9);
 }
 
+/* 可落子：墨色小圆点 */
 .chess-cell.valid::after {
     content: '';
     position: absolute;
-    width: calc(var(--cell, 52px) * 0.32);
-    height: calc(var(--cell, 52px) * 0.32);
+    width: calc(var(--cell, 52px) * 0.3);
+    height: calc(var(--cell, 52px) * 0.3);
     border-radius: 50%;
-    border: 3px solid rgba(46, 160, 67, 0.9);
-    box-shadow: 0 0 8px rgba(46, 160, 67, 0.7);
-    background: transparent;
+    background: radial-gradient(circle, rgba(44, 44, 44, 0.75) 0%, rgba(44, 44, 44, 0.4) 70%, transparent 100%);
     pointer-events: none;
     z-index: 4;
-    animation: validPulse 1.2s ease-in-out infinite;
+    animation: validPulse 1.4s ease-in-out infinite;
 }
 @keyframes validPulse {
-    0%, 100% { transform: scale(1); opacity: 0.9; }
-    50% { transform: scale(1.15); opacity: 1; }
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.2); opacity: 1; }
 }
 
+/* 上一步：淡金圆环 */
 .chess-cell.lastmove .chess-piece {
     box-shadow:
-        0 4px 8px rgba(0,0,0,0.45),
-        0 2px 3px rgba(0,0,0,0.3),
-        inset 0 1px 1px rgba(255,255,255,0.95),
-        inset 0 -3px 6px rgba(140, 100, 30, 0.35),
-        0 0 0 3px rgba(255, 200, 60, 0.85);
+        0 4px 8px rgba(44, 30, 10, 0.5),
+        0 2px 3px rgba(44, 30, 10, 0.35),
+        inset 0 1px 2px rgba(255,255,255,0.95),
+        inset 0 -3px 5px rgba(120, 90, 40, 0.25),
+        0 0 0 3px rgba(201, 169, 97, 0.85);
 }
 
 @media (max-width: 767px) {
     .chess-board {
-        border-width: 4px;
+        border-width: 8px;
         box-shadow:
-            0 0 0 3px #5c6b4a,
-            0 0 0 5px #3a4530,
-            inset 0 0 0 2px #8a9478,
-            inset 0 0 40px rgba(60,70,55,0.35),
-            0 8px 20px rgba(0,0,0,0.5);
+            inset 0 0 0 1px #C9A961,
+            inset 0 0 0 2px rgba(44, 44, 44, 0.6),
+            inset 0 0 40px rgba(120, 90, 40, 0.2),
+            0 6px 16px rgba(44, 30, 10, 0.3);
     }
+    .chess-board::before { inset: -8px; }
     .chess-river {
-        font-size: calc(var(--cell) * 0.65);
+        font-size: calc(var(--cell) * 0.7);
     }
 }
 
 /* ============================================================
    侧栏
    ============================================================ */
-.chess-side { display: flex; flex-direction: column; gap: 10px; }
-.chess-side .card { font-size: 13px; }
-.chess-side .card b { color: var(--primary); }
-.chess-side select {
-    background: rgba(30,41,59,0.9);
-    color: var(--text);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 8px 10px;
+.chess-side { display: flex; flex-direction: column; gap: 12px; }
+
+.ink-card {
+    background: rgba(245, 239, 224, 0.85);
+    border: 1px solid rgba(44, 44, 44, 0.2);
+    padding: 14px;
+    border-radius: 2px;
+    font-family: "KaiTi", "STKaiti", serif;
+    color: #2C2C2C;
+    box-shadow:
+        inset 0 0 20px rgba(180, 160, 120, 0.15),
+        0 2px 8px rgba(80, 60, 30, 0.08);
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1.8;
+}
+.ink-card .card-title {
     font-size: 13px;
-    font-family: inherit;
+    color: #4A4A4A;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(44, 44, 44, 0.15);
+    padding-bottom: 6px;
+}
+.ink-card b {
+    color: #B83B3B;
+    font-weight: 700;
+}
+
+.ink-select {
+    background: rgba(245, 239, 224, 0.95);
+    color: #2C2C2C;
+    border: 1.5px solid #4A4A4A;
+    border-radius: 2px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: "KaiTi", "STKaiti", serif;
+    letter-spacing: 3px;
     width: 100%;
     cursor: pointer;
     outline: none;
     min-height: 40px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%234A4A4A' stroke-width='1.5' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+.ink-select:focus {
+    border-color: #B83B3B;
+}
+
+.ink-btn {
+    background: transparent;
+    color: #2C2C2C;
+    border: 1.5px solid #4A4A4A;
+    padding: 10px 20px;
+    font-family: "KaiTi", "STKaiti", serif;
+    font-size: 15px;
+    letter-spacing: 6px;
+    cursor: pointer;
+    border-radius: 2px;
+    min-height: 44px;
+    transition: all 0.2s;
+    width: 100%;
+}
+.ink-btn:hover:not(:disabled) {
+    background: rgba(44, 44, 44, 0.06);
+    border-color: #1A1A1A;
+}
+.ink-btn.primary {
+    background: #B83B3B;
+    color: #F5EFE0;
+    border-color: #8B2A2A;
+}
+.ink-btn.primary:hover:not(:disabled) {
+    background: #8B2A2A;
+}
+.ink-btn:active:not(:disabled) {
+    transform: translateY(1px);
 }
 
 @media (max-width: 1023px) {
@@ -283,44 +405,78 @@
         width: 100%;
         gap: 8px;
     }
-    .chess-side .card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
-    .chess-side select { font-size: 12px; padding: 6px; min-height: 36px; }
-    .chess-side .btn { flex: 1 1 45%; font-size: 13px; }
+    .ink-card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
+    .ink-select { font-size: 13px; padding: 6px 30px 6px 8px; min-height: 36px; letter-spacing: 2px; }
+    .ink-btn { flex: 1 1 45%; font-size: 14px; letter-spacing: 4px; }
 }
+
+/* 水墨模态框 */
+body.ink-theme .modal-box {
+    background: #F5EFE0;
+    border: 1px solid #4A4A4A;
+    border-radius: 2px;
+    box-shadow:
+        inset 0 0 40px rgba(180, 160, 120, 0.2),
+        0 20px 60px rgba(44, 30, 10, 0.3);
+    font-family: "KaiTi", "STKaiti", serif;
+    padding: 40px 48px;
+    max-width: 90vw;
+    width: 420px;
+}
+body.ink-theme .modal-box h2 {
+    color: #1A1A1A;
+    font-size: 26px;
+    letter-spacing: 6px;
+    margin-bottom: 16px;
+    font-weight: 400;
+}
+body.ink-theme .modal-box p {
+    color: #4A4A4A;
+    font-size: 15px;
+    letter-spacing: 3px;
+}
+body.ink-theme .modal-box .big-value {
+    color: #B83B3B;
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-family: "KaiTi", "STKaiti", serif;
+}
+body.ink-theme .modal-actions { display: flex; gap: 12px; justify-content: center; }
+body.ink-theme .modal-actions .ink-btn { flex: 1; }
 </style>
 </head>
-<body class="embedded">
+<body class="embedded ink-theme">
 <div class="game-inner">
     <div class="chess-layout">
         <div class="chess-board-wrap">
             <div id="board" class="chess-board">
-                <!-- 楚河汉界 -->
-                <div class="chess-river"><span>楚河</span><span>汉界</span></div>
-                <!-- 九宫斜线（用 background 画） -->
+                <div class="chess-river"><span>楚　河</span><span>汉　界</span></div>
                 <div class="palace-top"></div>
                 <div class="palace-bottom"></div>
             </div>
         </div>
         <div class="chess-side">
-            <div class="card">
-                <div class="card-title">对局状态</div>
-                你执：<b id="playerSide">红方</b><br>
-                当前：<b id="turnLabel">红方</b>
+            <div class="ink-card">
+                <div class="card-title">对局</div>
+                执：<b id="playerSide">红方</b><br>
+                行：<b id="turnLabel">红方</b>
             </div>
-            <div class="card">
-                <div class="card-title">AI 棋力</div>
-                <select id="aiDepth">
-                    <option value="1">简单</option>
-                    <option value="2" selected>普通</option>
-                    <option value="3">困难</option>
+            <div class="ink-card">
+                <div class="card-title">棋力</div>
+                <select id="aiDepth" class="ink-select">
+                    <option value="1">入门</option>
+                    <option value="2" selected>进阶</option>
+                    <option value="3">高手</option>
                 </select>
             </div>
-            <button class="btn" id="btnNew">新对局</button>
-            <button class="btn ghost" id="btnUndo">悔棋</button>
-            <button class="btn ghost" id="btnSwap">切换先手</button>
-            <div class="card" style="font-size:12px; line-height:1.7; color: var(--text-sub);">
-                <div class="card-title">操作</div>
-                点击己方棋子 → 点击绿圈落子
+            <button class="ink-btn primary" id="btnNew">新　局</button>
+            <button class="ink-btn" id="btnUndo">悔　棋</button>
+            <button class="ink-btn" id="btnSwap">换　手</button>
+            <div class="ink-card" style="font-size:12px;">
+                <div class="card-title">手谈</div>
+                点己方棋子<br>
+                再点墨点落子
             </div>
         </div>
     </div>
@@ -328,11 +484,11 @@
 
 <div class="modal" id="endModal">
     <div class="modal-box">
-        <h2 id="endModalTitle">对局结束</h2>
+        <h2 id="endModalTitle">对局终了</h2>
         <p id="endModalSub">——</p>
         <div class="modal-actions">
-            <button class="btn" id="btnEndNew">新对局</button>
-            <button class="btn ghost" id="btnEndClose">关闭</button>
+            <button class="ink-btn primary" id="btnEndNew">再　来</button>
+            <button class="ink-btn" id="btnEndClose">收　子</button>
         </div>
     </div>
 </div>
@@ -342,9 +498,12 @@
 (function () {
     'use strict';
 
-    document.body.classList.add('embedded');
+    document.body.classList.add('embedded', 'ink-theme');
     GameBridge.notifyReady();
 
+    // ============================================================
+    // 数据（与之前完全一致）
+    // ============================================================
     const INIT = [
         ['r','n','b','a','k','a','b','n','r'],
         [0,0,0,0,0,0,0,0,0],
@@ -383,11 +542,14 @@
     const isBlack = p => p && p === p.toLowerCase();
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
+    // ============================================================
+    // 棋盘尺寸
+    // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.chess-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const frame = 24;
+        const frame = 28;
         const availW = vw - frame - 4;
         const availH = vh - 240;
         const byW = Math.floor(availW / 9);
@@ -696,7 +858,7 @@
             const winnerSide = kr ? 'red' : 'black';
             const winnerName = winnerSide === 'red' ? '红方' : '黑方';
             const loserName = winnerSide === 'red' ? '黑方' : '红方';
-            showEndModal(`${winnerName}获胜`, `${loserName}的将/帅已被吃`);
+            showEndModal(`${winnerName}　胜`, `${loserName}将帅就擒`);
             return;
         }
         const side = turn;
@@ -716,8 +878,8 @@
         if (hasLegal) return;
 
         gameOver = true;
-        const reason = isInCheck(side) ? '被将死' : '被困毙';
-        showEndModal(`${opponentName}获胜`, `${sideName}${reason}`);
+        const reason = isInCheck(side) ? '将死' : '困毙';
+        showEndModal(`${opponentName}　胜`, `${sideName}${reason}`);
     }
 
     function showEndModal(title, sub) {
@@ -725,7 +887,7 @@
         endModalSub.textContent = sub;
         endModal.classList.add('show');
         aiThinking = false;
-        turnLabel.textContent = '对局结束';
+        turnLabel.textContent = '终了';
     }
 
     function evaluate() {
@@ -812,7 +974,7 @@
         if (gameOver || turn === playerSide) return;
         if (aiTimerId) clearTimeout(aiTimerId);
         aiThinking = true;
-        turnLabel.textContent = 'AI 思考中…';
+        turnLabel.textContent = '思　索';
         aiTimerId = setTimeout(() => {
             aiTimerId = null;
             aiPlay();
