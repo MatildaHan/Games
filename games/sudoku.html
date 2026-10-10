@@ -36,7 +36,6 @@
 .diff-btn.active .prog { color: #064e3b; }
 
 .sudoku-main { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-
 .sudoku-board {
     display: grid;
     grid-template-columns: repeat(9, var(--cell-size, 48px));
@@ -86,8 +85,7 @@
     border: 1px solid rgba(255,255,255,0.05);
 }
 .num-btn {
-    width: 48px;
-    height: 48px;
+    width: 48px; height: 48px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.05);
@@ -100,8 +98,9 @@
     min-width: 44px;
     min-height: 44px;
 }
-.num-btn:hover { background: rgba(255,255,255,0.15); }
-.num-btn:active { background: var(--primary-mid); }
+.num-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+.num-btn:active:not(:disabled) { background: var(--primary-mid); }
+.num-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .num-btn.erase {
     grid-column: span 3;
     width: 100%;
@@ -109,18 +108,13 @@
     color: var(--danger);
     font-size: 14px;
 }
-.num-btn.erase:hover { background: rgba(239, 68, 68, 0.4); }
 
 .status-text { color: var(--text-sub); font-size: 13px; min-height: 18px; }
 
 @media (max-width: 1023px) {
-    .sudoku-layout {
-        grid-template-columns: 120px auto 160px;
-        gap: 16px;
-    }
+    .sudoku-layout { grid-template-columns: 120px auto 160px; gap: 16px; }
     .sudoku-board { --cell-size: 40px; }
 }
-
 @media (max-width: 767px) {
     .sudoku-layout {
         grid-template-columns: 1fr;
@@ -156,7 +150,7 @@
 }
 </style>
 </head>
-<body>
+<body class="embedded">
 <div class="game-inner">
     <div class="sudoku-layout">
         <div class="diff-list" id="diffList">
@@ -172,12 +166,25 @@
     </div>
 </div>
 
+<div class="modal" id="modal">
+    <div class="modal-box">
+        <h2 id="modalTitle">恭喜通关</h2>
+        <p id="modalSub">完美解题</p>
+        <div class="modal-actions">
+            <button class="btn" id="btnNext">下一题</button>
+            <button class="btn ghost" id="btnClose">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
 <script src="../js/bridge.js"></script>
 <script>
 (function () {
     'use strict';
+    document.body.classList.add('embedded');
 
-    // 4 个合法解（人工验证过，每行每列每宫都含 1-9）
     const SOLUTIONS = [
         "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
         "435269781682571493197834562826195347374682915951743628519326874248957136763418259",
@@ -199,15 +206,31 @@
     let solution = '';
     let difficulty = 0;
     let selectedIdx = null;
+    let locked = false;
 
     const boardEl = document.getElementById('board');
     const diffList = document.getElementById('diffList');
     const numberPad = document.getElementById('numberPad');
     const statusEl = document.getElementById('status');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSub = document.getElementById('modalSub');
+    const btnNext = document.getElementById('btnNext');
+    const btnClose = document.getElementById('btnClose');
+    const toastContainer = document.getElementById('toastContainer');
 
-    // ============================================================
-    // 合法性自检（防止非法解混入）
-    // ============================================================
+    function toast(text, type = '') {
+        const el = document.createElement('div');
+        el.className = 'toast' + (type ? ' ' + type : '');
+        el.textContent = text;
+        toastContainer.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 0.3s';
+            setTimeout(() => el.remove(), 300);
+        }, 2000);
+    }
+
     function isValidSolution(s) {
         if (s.length !== 81) return false;
         for (let i = 0; i < 9; i++) {
@@ -218,32 +241,21 @@
             }
             if (row.size !== 9 || col.size !== 9) return false;
         }
-        for (let bi = 0; bi < 3; bi++) {
-            for (let bj = 0; bj < 3; bj++) {
-                const box = new Set();
-                for (let i = 0; i < 3; i++) {
-                    for (let j = 0; j < 3; j++) {
-                        box.add(s[(bi * 3 + i) * 9 + (bj * 3 + j)]);
-                    }
-                }
-                if (box.size !== 9) return false;
+        for (let bi = 0; bi < 3; bi++) for (let bj = 0; bj < 3; bj++) {
+            const box = new Set();
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+                box.add(s[(bi * 3 + i) * 9 + (bj * 3 + j)]);
             }
+            if (box.size !== 9) return false;
         }
         return true;
     }
-
-    // 启动时自检
     (function selfTest() {
         SOLUTIONS.forEach((s, i) => {
-            if (!isValidSolution(s)) {
-                console.error(`[sudoku] SOLUTIONS[${i}] 不是合法数独`);
-            }
+            if (!isValidSolution(s)) console.error(`[sudoku] SOLUTIONS[${i}] 非法`);
         });
     })();
 
-    // ============================================================
-    // 进度存储
-    // ============================================================
     function loadProgress() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -259,9 +271,6 @@
         return level === 0 || progress[level - 1] >= UNLOCK_THRESHOLD;
     }
 
-    // ============================================================
-    // UI 构建
-    // ============================================================
     function buildDiffButtons() {
         const progress = loadProgress();
         diffList.innerHTML = '<div class="card-title" style="margin-bottom:4px;">难度</div>';
@@ -305,9 +314,6 @@
         numberPad.appendChild(e);
     }
 
-    // ============================================================
-    // 出题
-    // ============================================================
     function generatePuzzle(holes) {
         solution = SOLUTIONS[Math.floor(Math.random() * SOLUTIONS.length)];
         const arr = solution.split('');
@@ -325,11 +331,12 @@
     function renderBoard(puzzleStr) {
         boardEl.innerHTML = '';
         selectedIdx = null;
+        locked = false;
         for (let i = 0; i < 81; i++) {
             const input = document.createElement('input');
             input.type = 'text';
             input.maxLength = 1;
-            input.inputMode = 'none';  // 手机上不弹系统键盘
+            input.inputMode = 'none';
             input.classList.add('sudoku-cell');
             input.dataset.index = i;
             input.setAttribute('aria-label', `第 ${Math.floor(i/9)+1} 行 第 ${i%9+1} 列`);
@@ -341,7 +348,6 @@
             } else {
                 input.addEventListener('input', onInput);
             }
-            // 预填格也绑定 keydown，避免方向键卡住
             input.addEventListener('keydown', onKeydown);
             input.addEventListener('click', () => selectCell(i));
             boardEl.appendChild(input);
@@ -349,12 +355,9 @@
         statusEl.textContent = `当前难度：${DIFFS[difficulty].name}`;
     }
 
-    // ============================================================
-    // 选中 / 高亮（拆分）
-    // ============================================================
     function selectCell(idx) {
+        if (locked) return;
         if (selectedIdx === idx) {
-            // 再次点击同一格：取消选中
             clearHighlights();
             selectedIdx = null;
             return;
@@ -369,17 +372,12 @@
         const row = Math.floor(selectedIdx / 9), col = selectedIdx % 9;
         const boxR = Math.floor(row / 3) * 3, boxC = Math.floor(col / 3) * 3;
         const val = boardEl.children[selectedIdx].value;
-
         for (let i = 0; i < 81; i++) {
             const cell = boardEl.children[i];
             const r = Math.floor(i / 9), c = i % 9;
             const inBox = r >= boxR && r < boxR + 3 && c >= boxC && c < boxC + 3;
-            if (i !== selectedIdx && (r === row || c === col || inBox)) {
-                cell.classList.add('hl-light');
-            }
-            if (val && i !== selectedIdx && cell.value === val) {
-                cell.classList.add('hl-same');
-            }
+            if (i !== selectedIdx && (r === row || c === col || inBox)) cell.classList.add('hl-light');
+            if (val && i !== selectedIdx && cell.value === val) cell.classList.add('hl-same');
         }
         boardEl.children[selectedIdx].classList.add('selected');
     }
@@ -390,14 +388,11 @@
         }
     }
 
-    // ============================================================
-    // 输入
-    // ============================================================
     function onInput(e) {
+        if (locked) { e.target.value = ''; return; }
         const input = e.target;
         input.value = input.value.replace(/[^1-9]/g, '');
         input.classList.remove('error');
-        // 输入后刷新高亮（不要取消选中）
         refreshHighlights();
         checkCompletion();
     }
@@ -411,43 +406,32 @@
         if (e.key === 'ArrowRight' && idx % 9 !== 8) next = idx + 1;
         if (next !== null) {
             e.preventDefault();
-            // 移动焦点，让下一次 keydown 发生在新格子上
             boardEl.children[next].focus();
             selectCell(next);
         }
     }
 
-    // 数字键盘
     numberPad.addEventListener('click', e => {
+        if (locked) return;
         const btn = e.target.closest('.num-btn');
         if (!btn) return;
-        if (selectedIdx === null) {
-            flashStatus('请先点击棋盘上的空格');
-            return;
-        }
+        if (selectedIdx === null) { toast('请先点击棋盘上的空格', 'warn'); return; }
         const input = boardEl.children[selectedIdx];
-        if (input.readOnly) {
-            flashStatus('预填数字不可修改');
-            return;
-        }
+        if (input.readOnly) { toast('预填数字不可修改', 'warn'); return; }
         const val = btn.dataset.val;
         input.value = val === '0' ? '' : val;
         input.classList.remove('error');
-        // 刷新高亮，不取消选中
         refreshHighlights();
         checkCompletion();
     });
 
-    // ============================================================
-    // 校验（按规则，不比对固定解）
-    // ============================================================
     function isBoardValid() {
         for (let r = 0; r < 9; r++) {
             const seen = new Set();
             for (let c = 0; c < 9; c++) {
                 const v = boardEl.children[r * 9 + c].value;
-                if (!v) return { valid: false, reason: 'incomplete' };
-                if (seen.has(v)) return { valid: false, reason: 'dup' };
+                if (!v) return false;
+                if (seen.has(v)) return false;
                 seen.add(v);
             }
         }
@@ -455,66 +439,23 @@
             const seen = new Set();
             for (let r = 0; r < 9; r++) {
                 const v = boardEl.children[r * 9 + c].value;
-                if (seen.has(v)) return { valid: false, reason: 'dup' };
+                if (seen.has(v)) return false;
                 seen.add(v);
             }
         }
-        for (let bi = 0; bi < 3; bi++) {
-            for (let bj = 0; bj < 3; bj++) {
-                const seen = new Set();
-                for (let i = 0; i < 3; i++) {
-                    for (let j = 0; j < 3; j++) {
-                        const v = boardEl.children[(bi * 3 + i) * 9 + (bj * 3 + j)].value;
-                        if (seen.has(v)) return { valid: false, reason: 'dup' };
-                        seen.add(v);
-                    }
-                }
+        for (let bi = 0; bi < 3; bi++) for (let bj = 0; bj < 3; bj++) {
+            const seen = new Set();
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+                const v = boardEl.children[(bi * 3 + i) * 9 + (bj * 3 + j)].value;
+                if (seen.has(v)) return false;
+                seen.add(v);
             }
         }
-        return { valid: true };
-    }
-
-    let statusTimer = null;
-    function flashStatus(text) {
-        statusEl.textContent = text;
-        if (statusTimer) clearTimeout(statusTimer);
-        statusTimer = setTimeout(() => {
-            statusEl.textContent = `当前难度：${DIFFS[difficulty].name}`;
-        }, 1500);
-    }
-
-    function checkCompletion() {
-        // 是否填满
-        for (let i = 0; i < 81; i++) {
-            if (!boardEl.children[i].value) return;
-        }
-        // 规则校验（不比对 solution）
-        const res = isBoardValid();
-        if (!res.valid) {
-            // 把冲突格标红
-            markConflicts();
-            return;
-        }
-        // 清除错误标记
-        for (let i = 0; i < 81; i++) boardEl.children[i].classList.remove('error');
-
-        // 通关
-        const progress = loadProgress();
-        progress[difficulty]++;
-        saveProgress(progress);
-        buildDiffButtons();
-
-        setTimeout(() => {
-            alert('恭喜你，完美通关！');
-            newGame();
-        }, 100);
+        return true;
     }
 
     function markConflicts() {
-        // 简单起见：清空所有错误标记，重新标记冲突格
         for (let i = 0; i < 81; i++) boardEl.children[i].classList.remove('error');
-
-        // 行冲突
         for (let r = 0; r < 9; r++) {
             const seen = new Map();
             for (let c = 0; c < 9; c++) {
@@ -524,12 +465,9 @@
                 if (seen.has(v)) {
                     boardEl.children[seen.get(v)].classList.add('error');
                     boardEl.children[idx].classList.add('error');
-                } else {
-                    seen.set(v, idx);
-                }
+                } else seen.set(v, idx);
             }
         }
-        // 列冲突
         for (let c = 0; c < 9; c++) {
             const seen = new Map();
             for (let r = 0; r < 9; r++) {
@@ -539,41 +477,53 @@
                 if (seen.has(v)) {
                     boardEl.children[seen.get(v)].classList.add('error');
                     boardEl.children[idx].classList.add('error');
-                } else {
-                    seen.set(v, idx);
-                }
+                } else seen.set(v, idx);
             }
         }
-        // 宫冲突
-        for (let bi = 0; bi < 3; bi++) {
-            for (let bj = 0; bj < 3; bj++) {
-                const seen = new Map();
-                for (let i = 0; i < 3; i++) {
-                    for (let j = 0; j < 3; j++) {
-                        const idx = (bi * 3 + i) * 9 + (bj * 3 + j);
-                        const v = boardEl.children[idx].value;
-                        if (!v) continue;
-                        if (seen.has(v)) {
-                            boardEl.children[seen.get(v)].classList.add('error');
-                            boardEl.children[idx].classList.add('error');
-                        } else {
-                            seen.set(v, idx);
-                        }
-                    }
-                }
+        for (let bi = 0; bi < 3; bi++) for (let bj = 0; bj < 3; bj++) {
+            const seen = new Map();
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+                const idx = (bi * 3 + i) * 9 + (bj * 3 + j);
+                const v = boardEl.children[idx].value;
+                if (!v) continue;
+                if (seen.has(v)) {
+                    boardEl.children[seen.get(v)].classList.add('error');
+                    boardEl.children[idx].classList.add('error');
+                } else seen.set(v, idx);
             }
         }
     }
 
-    // ============================================================
-    // 生命周期
-    // ============================================================
+    function checkCompletion() {
+        for (let i = 0; i < 81; i++) if (!boardEl.children[i].value) return;
+        if (!isBoardValid()) { markConflicts(); return; }
+        // 通关
+        locked = true;
+        // 禁用数字键盘
+        numberPad.querySelectorAll('.num-btn').forEach(b => b.disabled = true);
+        const progress = loadProgress();
+        progress[difficulty]++;
+        saveProgress(progress);
+        buildDiffButtons();
+        modalTitle.textContent = '恭喜通关';
+        modalSub.textContent = `难度：${DIFFS[difficulty].name}`;
+        modal.classList.add('show');
+    }
+
+    btnNext.onclick = () => {
+        modal.classList.remove('show');
+        numberPad.querySelectorAll('.num-btn').forEach(b => b.disabled = false);
+        newGame();
+    };
+    btnClose.onclick = () => {
+        modal.classList.remove('show');
+    };
+
     function newGame() {
         const puzzle = generatePuzzle(DIFFS[difficulty].holes);
         renderBoard(puzzle);
+        numberPad.querySelectorAll('.num-btn').forEach(b => b.disabled = false);
     }
-
-    GameBridge.onParentMessage(() => {});
 
     buildDiffButtons();
     buildNumberPad();
