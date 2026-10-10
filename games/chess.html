@@ -17,7 +17,7 @@
 .chess-board-wrap { display: flex; justify-content: center; align-items: center; }
 
 /* ============================================================
-   棋盘：真实象棋纸质感
+   棋盘：灰绿石纹 + 双层边框
    ============================================================ */
 .chess-board {
     position: relative;
@@ -25,58 +25,62 @@
     grid-template-columns: repeat(9, var(--cell, 52px));
     grid-template-rows: repeat(10, var(--cell, 52px));
     background:
-        radial-gradient(ellipse at center, rgba(255,255,255,0.35) 0%, rgba(0,0,0,0) 70%),
-        linear-gradient(135deg, #f3e2b6 0%, #ecd9a4 40%, #e6cd8f 100%);
-    padding: 0;
-    border: 10px solid #6b4423;
-    border-radius: 6px;
+        radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 65%),
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(60,70,55,0.22) 100%),
+        repeating-linear-gradient(115deg,
+            rgba(120,130,110,0.05) 0px,
+            rgba(120,130,110,0.05) 2px,
+            transparent 2px,
+            transparent 5px),
+        repeating-linear-gradient(35deg,
+            rgba(80,90,70,0.04) 0px,
+            rgba(80,90,70,0.04) 3px,
+            transparent 3px,
+            transparent 7px),
+        linear-gradient(135deg, #b5bca6 0%, #a9b19a 50%, #9ba38d 100%);
+    border: 6px solid #c9c2a4;
+    border-radius: 4px;
     box-shadow:
-        inset 0 0 0 2px #3a2412,
-        inset 0 0 0 3px #c9a86a,
-        inset 0 0 40px rgba(80, 40, 10, 0.25),
-        0 10px 30px rgba(0,0,0,0.6),
-        0 2px 6px rgba(0,0,0,0.4);
+        0 0 0 4px #5c6b4a,
+        0 0 0 6px #3a4530,
+        inset 0 0 0 2px #8a9478,
+        inset 0 0 60px rgba(60,70,55,0.35),
+        0 12px 32px rgba(0,0,0,0.5),
+        0 3px 8px rgba(0,0,0,0.35);
     background-clip: padding-box;
     touch-action: manipulation;
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
-}
-
-/* 木框纹理 */
-.chess-board::before {
-    content: '';
-    position: absolute;
-    inset: -10px;
-    border-radius: 6px;
-    background:
-        repeating-linear-gradient(
-            92deg,
-            rgba(0,0,0,0.08) 0px,
-            rgba(0,0,0,0.08) 1px,
-            transparent 1px,
-            transparent 3px
-        ),
-        linear-gradient(180deg, #7a4e26 0%, #5c3818 50%, #6b4423 100%);
-    z-index: -1;
-    pointer-events: none;
+    box-sizing: content-box;
 }
 
 /* 棋盘格线 */
-.chess-board::after {
+.chess-board::before {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     background-image:
-        linear-gradient(to right, #4a2c14 1px, transparent 1px),
-        linear-gradient(to bottom, #4a2c14 1px, transparent 1px);
+        linear-gradient(to right, #5f6b54 1px, transparent 1px),
+        linear-gradient(to bottom, #5f6b54 1px, transparent 1px);
     background-size:
         var(--cell) var(--cell),
         var(--cell) var(--cell);
     background-position:
         calc(var(--cell) / 2) 0,
         0 calc(var(--cell) / 2);
-    opacity: 0.85;
+    opacity: 0.55;
+}
+
+/* 内圈描线（米黄） */
+.chess-board::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border: 1px solid rgba(200, 190, 150, 0.55);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* 楚河汉界 */
@@ -84,21 +88,21 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(var(--cell) * 4.5);
-    height: var(--cell);
+    top: calc(var(--cell) * 4);
+    height: calc(var(--cell) * 2);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16%;
+    padding: 0 12%;
     font-family: "KaiTi", "STKaiti", serif;
-    font-size: calc(var(--cell) * 0.55);
-    color: #2c1a0a;
-    letter-spacing: 6px;
+    font-size: calc(var(--cell) * 0.7);
+    color: #4a5340;
     pointer-events: none;
     user-select: none;
     z-index: 1;
     font-weight: 700;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    letter-spacing: 0.15em;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.45);
 }
 
 /* 九宫斜线 */
@@ -113,14 +117,14 @@
 .chess-palace.bottom { bottom: 0; left: calc(var(--cell) * 3); }
 .chess-palace svg { width: 100%; height: 100%; display: block; }
 .chess-palace line {
-    stroke: #4a2c14;
-    stroke-width: 2;
+    stroke: #6a7258;
+    stroke-width: 1.5;
     stroke-linecap: round;
-    opacity: 0.85;
+    opacity: 0.75;
 }
 
 /* ============================================================
-   棋子
+   棋子：竹木圆盘 + 立体阴影 + 内圈描线
    ============================================================ */
 .chess-cell {
     position: relative;
@@ -134,8 +138,8 @@
 }
 
 .chess-piece {
-    width: calc(var(--cell, 52px) * 0.86);
-    height: calc(var(--cell, 52px) * 0.86);
+    width: calc(var(--cell, 52px) * 0.88);
+    height: calc(var(--cell, 52px) * 0.88);
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -147,73 +151,76 @@
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     background:
-        radial-gradient(circle at 35% 30%, #ffffff 0%, #f5efd8 30%, #e8d9a8 65%, #cbb177 100%);
+        radial-gradient(circle at 50% 50%,
+            #fcf1d4 0%,
+            #f8e8b8 40%,
+            #eed89c 65%,
+            #d9be78 85%,
+            #c0a45e 100%);
     box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #b89464,
-        inset 0 0 0 3px #8a6a3c;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+        0 2px 4px rgba(0,0,0,0.35),
+        0 1px 1px rgba(0,0,0,0.25),
+        inset 0 1px 1px rgba(255,255,255,0.95),
+        inset 0 -3px 6px rgba(140, 100, 30, 0.35);
 }
 
+/* 棋子外圈描线 */
 .chess-piece::before {
     content: '';
     position: absolute;
-    inset: 14%;
+    inset: 4%;
+    border-radius: 50%;
+    pointer-events: none;
+}
+/* 内圈细线 */
+.chess-piece::after {
+    content: '';
+    position: absolute;
+    inset: 16%;
     border-radius: 50%;
     border: 1.5px solid currentColor;
-    opacity: 0.55;
+    opacity: 0.5;
     pointer-events: none;
 }
 
 .chess-cell.red .chess-piece {
-    color: #a01e1e;
-    background:
-        radial-gradient(circle at 35% 30%, #fdf6e3 0%, #f7ecc9 35%, #efdca4 70%, #d9b877 100%);
+    color: #b81c1c;
+}
+.chess-cell.red .chess-piece::before {
     box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(160, 90, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #c08040,
-        inset 0 0 0 3px #8a2020;
+        inset 0 0 0 2px #9a4030,
+        inset 0 0 0 4px #c7a566;
 }
 
 .chess-cell.black .chess-piece {
     color: #1a1a1a;
-    background:
-        radial-gradient(circle at 35% 30%, #f5ebd0 0%, #ecdcb0 35%, #d9c088 70%, #b89a60 100%);
+}
+.chess-cell.black .chess-piece::before {
     box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(60, 40, 20, 0.45),
-        inset 0 2px 3px rgba(255, 255, 255, 0.85),
-        inset 0 0 0 2px #a08050,
-        inset 0 0 0 3px #2a2a2a;
+        inset 0 0 0 2px #2c2c2c,
+        inset 0 0 0 4px #c7a566;
 }
 
+/* 选中 */
 .chess-cell.selected .chess-piece {
     transform: translateY(-2px) scale(1.06);
     box-shadow:
-        0 5px 10px rgba(0,0,0,0.5),
-        0 2px 4px rgba(0,0,0,0.35),
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #d4af37,
-        inset 0 0 0 3px #b89464,
-        0 0 0 3px rgba(212, 175, 55, 0.7);
+        0 4px 8px rgba(0,0,0,0.45),
+        0 2px 3px rgba(0,0,0,0.3),
+        inset 0 1px 1px rgba(255,255,255,0.95),
+        inset 0 -3px 6px rgba(140, 100, 30, 0.35),
+        0 0 0 3px rgba(212, 175, 55, 0.85);
 }
 
+/* 可落子点 */
 .chess-cell.valid::after {
     content: '';
     position: absolute;
     width: calc(var(--cell, 52px) * 0.32);
     height: calc(var(--cell, 52px) * 0.32);
     border-radius: 50%;
-    border: 3px solid rgba(46, 160, 67, 0.85);
-    box-shadow: 0 0 8px rgba(46, 160, 67, 0.6), inset 0 0 4px rgba(46, 160, 67, 0.5);
+    border: 3px solid rgba(46, 160, 67, 0.9);
+    box-shadow: 0 0 8px rgba(46, 160, 67, 0.7);
     background: transparent;
     pointer-events: none;
     z-index: 4;
@@ -224,20 +231,30 @@
     50% { transform: scale(1.15); opacity: 1; }
 }
 
+/* 上一步 */
 .chess-cell.lastmove .chess-piece {
     box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #d4af37,
-        inset 0 0 0 3px #b89464,
-        0 0 0 3px rgba(255, 200, 60, 0.8);
+        0 4px 8px rgba(0,0,0,0.45),
+        0 2px 3px rgba(0,0,0,0.3),
+        inset 0 1px 1px rgba(255,255,255,0.95),
+        inset 0 -3px 6px rgba(140, 100, 30, 0.35),
+        0 0 0 3px rgba(255, 200, 60, 0.85);
 }
 
+/* 手机端 */
 @media (max-width: 767px) {
-    .chess-board { border-width: 6px; }
-    .chess-board::before { inset: -6px; }
+    .chess-board {
+        border-width: 4px;
+        box-shadow:
+            0 0 0 3px #5c6b4a,
+            0 0 0 5px #3a4530,
+            inset 0 0 0 2px #8a9478,
+            inset 0 0 40px rgba(60,70,55,0.35),
+            0 8px 20px rgba(0,0,0,0.5);
+    }
+    .chess-river {
+        font-size: calc(var(--cell) * 0.65);
+    }
 }
 
 /* ============================================================
@@ -288,7 +305,9 @@
     <div class="chess-layout">
         <div class="chess-board-wrap">
             <div id="board" class="chess-board">
-                <div class="chess-river">楚 河　　　　　汉 界</div>
+                <!-- 楚河汉界 -->
+                <div class="chess-river"><span>楚河</span><span>汉界</span></div>
+                <!-- 九宫斜线 -->
                 <div class="chess-palace top">
                     <svg viewBox="0 0 100 100" preserveAspectRatio="none">
                         <line x1="0" y1="0" x2="100" y2="100" />
@@ -392,7 +411,7 @@
         const wrap = document.querySelector('.chess-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const frame = 20;
+        const frame = 24;
         const availW = vw - frame - 4;
         const availH = vh - 240;
         const byW = Math.floor(availW / 9);
@@ -401,12 +420,11 @@
     }
 
     // ============================================================
-    // 构建棋盘 DOM
+    // 构建棋盘 DOM（保留装饰元素）
     // ============================================================
     let cellEls = null;
 
     function buildBoardDOM() {
-        // 保留装饰元素（楚河汉界、九宫斜线），只清棋子层
         const decorations = Array.from(boardEl.children);
         boardEl.innerHTML = '';
         decorations.forEach(d => boardEl.appendChild(d));
@@ -552,7 +570,7 @@
     }
 
     // ============================================================
-    // 快速 isInCheck（只从将/帅位置反向查攻击源）
+    // 快速 isInCheck
     // ============================================================
     function findKing(side) {
         const target = side === 'red' ? 'K' : 'k';
@@ -581,7 +599,6 @@
             return side === 'red' ? isBlack(p) : isRed(p);
         };
 
-        // 1. 车 / 炮 / 将（相邻）的直线攻击
         const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
         for (const [dx, dy] of dirs) {
             let nx = kx + dx, ny = ky + dy;
@@ -609,7 +626,6 @@
         }
         if (kingsFacing()) return true;
 
-        // 2. 马
         const knightOffsets = [
             [1, 2, 0, 1],[-1, 2, 0, 1],[1,-2,0,-1],[-1,-2,0,-1],
             [2, 1, 1, 0],[2,-1, 1, 0],[-2, 1,-1, 0],[-2,-1,-1, 0]
@@ -625,7 +641,6 @@
             return true;
         }
 
-        // 3. 兵 / 卒
         if (side === 'red') {
             if (ky - 1 >= 0 && board[ky - 1][kx] === 'p') return true;
             if (kx - 1 >= 0 && board[ky][kx - 1] === 'p') return true;
@@ -772,7 +787,6 @@
             if (side === 'black' && !isBlack(p)) continue;
             getLegalMoves(x, y).forEach(m => result.push({ from: { x, y }, to: m }));
         }
-        // 排序：吃子优先
         result.sort((a, b) => {
             const pa = board[a.to.y][a.to.x];
             const pb = board[b.to.y][b.to.x];
