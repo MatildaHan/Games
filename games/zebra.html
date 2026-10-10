@@ -446,4 +446,417 @@
             categories: {
                 city:  { label: '城市', values: ['北京','上海','广州','深圳','成都'] },
                 skill: { label: '擅长', values: ['数学','英语','语文','物理','化学'] },
-                like:  { label: '喜欢
+                like:  { label: '喜欢', values: ['物理','化学','生物','地理','历史'] },
+                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','兔子'] }
+            },
+            clues: [
+                a => a[posOf(a,'city','北京')] && a[posOf(a,'city','北京')].skill === '数学',
+                a => a[posOf(a,'city','上海')] && a[posOf(a,'city','上海')].like === '物理',
+                a => a[posOf(a,'city','广州')] && a[posOf(a,'city','广州')].pet === '猫',
+                a => a[posOf(a,'city','深圳')] && a[posOf(a,'city','深圳')].skill === '英语',
+                a => a[2] && a[2].like === '化学',
+                a => a[0] && a[0].city === '成都',
+                a => a[posOf(a,'pet','狗')] && a[posOf(a,'pet','狗')].skill === '语文',
+                a => a[posOf(a,'like','生物')] && a[posOf(a,'like','生物')].pet === '鸟',
+                a => adjacent(posOf(a,'skill','数学'), posOf(a,'pet','狗')),
+                a => adjacent(posOf(a,'like','物理'), posOf(a,'city','成都'))
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五个花园',
+            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水。',
+            clueTexts: [
+                '红色围栏的花园种玫瑰。',
+                '蓝色围栏的花园种郁金香。',
+                '绿色围栏的花园种百合。',
+                '中间花园种向日葵。',
+                '黄色围栏的花园种雏菊。',
+                '白色围栏的花园在绿色围栏的右边。',
+                '早上浇水的人在种向日葵的花园。',
+                '养蜜蜂的花园种玫瑰。',
+                '养蝴蝶的花园在养蜜蜂的花园旁边。',
+                '种郁金香的花园在中午浇水。'
+            ],
+            question: '谁种百合？',
+            categories: {
+                fence: { label: '围栏', values: ['红色','蓝色','绿色','黄色','白色'] },
+                flower:{ label: '花',   values: ['玫瑰','郁金香','百合','向日葵','雏菊'] },
+                time:  { label: '浇水', values: ['早上','中午','下午','傍晚','晚上'] },
+                pet:   { label: '昆虫', values: ['蜜蜂','蝴蝶','瓢虫','萤火虫','蚂蚁'] }
+            },
+            clues: [
+                a => a[posOf(a,'fence','红色')] && a[posOf(a,'fence','红色')].flower === '玫瑰',
+                a => a[posOf(a,'fence','蓝色')] && a[posOf(a,'fence','蓝色')].flower === '郁金香',
+                a => a[posOf(a,'fence','绿色')] && a[posOf(a,'fence','绿色')].flower === '百合',
+                a => a[2] && a[2].flower === '向日葵',
+                a => a[posOf(a,'fence','黄色')] && a[posOf(a,'fence','黄色')].flower === '雏菊',
+                a => posOf(a,'fence','白色') > posOf(a,'fence','绿色'),
+                a => a[posOf(a,'time','早上')] && a[posOf(a,'time','早上')].flower === '向日葵',
+                a => a[posOf(a,'pet','蜜蜂')] && a[posOf(a,'pet','蜜蜂')].flower === '玫瑰',
+                a => adjacent(posOf(a,'pet','蝴蝶'), posOf(a,'pet','蜜蜂')),
+                a => a[posOf(a,'flower','郁金香')] && a[posOf(a,'flower','郁金香')].time === '中午'
+            ],
+            target: { house: -1, key: 'fence', value: '绿色' }
+        },
+        {
+            title: '五辆汽车',
+            intro: '5 位车主，各自开不同品牌、不同颜色、不同能源、不同座位数的车，养不同宠物。',
+            clueTexts: [
+                '开奔驰的人开红色车。',
+                '开宝马的人开黑色车。',
+                '开奥迪的人开白色车。',
+                '开特斯拉的人开电动车。',
+                '中间位置的人开 5 座车。',
+                '开丰田的人开蓝色车。',
+                '开混合动力车的人养狗。',
+                '开 7 座车的人养猫。',
+                '养鸟的人开 2 座车。',
+                '开奔驰的人住在开特斯拉的人旁边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                brand: { label: '品牌', values: ['奔驰','宝马','奥迪','特斯拉','丰田'] },
+                color: { label: '颜色', values: ['红色','黑色','白色','蓝色','银色'] },
+                fuel:  { label: '能源', values: ['汽油','柴油','电动','混合','氢能'] },
+                seat:  { label: '座位', values: ['2座','4座','5座','7座','9座'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] }
+            },
+            clues: [
+                a => a[posOf(a,'brand','奔驰')] && a[posOf(a,'brand','奔驰')].color === '红色',
+                a => a[posOf(a,'brand','宝马')] && a[posOf(a,'brand','宝马')].color === '黑色',
+                a => a[posOf(a,'brand','奥迪')] && a[posOf(a,'brand','奥迪')].color === '白色',
+                a => a[posOf(a,'brand','特斯拉')] && a[posOf(a,'brand','特斯拉')].fuel === '电动',
+                a => a[2] && a[2].seat === '5座',
+                a => a[posOf(a,'brand','丰田')] && a[posOf(a,'brand','丰田')].color === '蓝色',
+                a => a[posOf(a,'fuel','混合')] && a[posOf(a,'fuel','混合')].pet === '狗',
+                a => a[posOf(a,'seat','7座')] && a[posOf(a,'seat','7座')].pet === '猫',
+                a => a[posOf(a,'pet','鸟')] && a[posOf(a,'pet','鸟')].seat === '2座',
+                a => adjacent(posOf(a,'brand','奔驰'), posOf(a,'brand','特斯拉'))
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五杯咖啡',
+            intro: '5 个人在咖啡馆点了不同咖啡、加了不同配料、坐在不同位置、看不同书、穿不同颜色衣服。',
+            clueTexts: [
+                '穿红衣服的人点浓缩咖啡。',
+                '穿蓝衣服的人加牛奶。',
+                '穿绿衣服的人看小说。',
+                '中间位置的人点卡布奇诺。',
+                '穿黄衣服的人点美式。',
+                '穿白衣服的人坐在穿绿衣服的右边。',
+                '看杂志的人加糖。',
+                '看报纸的人点摩卡。',
+                '加奶泡的人坐在加糖的人旁边。',
+                '喝拿铁的人坐在第一位。'
+            ],
+            question: '谁看诗集？',
+            categories: {
+                color:  { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
+                coffee: { label: '咖啡', values: ['浓缩','拿铁','卡布奇诺','美式','摩卡'] },
+                extra:  { label: '配料', values: ['牛奶','糖','奶泡','肉桂','可可'] },
+                book:   { label: '书籍', values: ['小说','杂志','报纸','诗集','漫画'] }
+            },
+            clues: [
+                a => a[posOf(a,'color','红色')] && a[posOf(a,'color','红色')].coffee === '浓缩',
+                a => a[posOf(a,'color','蓝色')] && a[posOf(a,'color','蓝色')].extra === '牛奶',
+                a => a[posOf(a,'color','绿色')] && a[posOf(a,'color','绿色')].book === '小说',
+                a => a[2] && a[2].coffee === '卡布奇诺',
+                a => a[posOf(a,'color','黄色')] && a[posOf(a,'color','黄色')].coffee === '美式',
+                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
+                a => a[posOf(a,'book','杂志')] && a[posOf(a,'book','杂志')].extra === '糖',
+                a => a[posOf(a,'book','报纸')] && a[posOf(a,'book','报纸')].coffee === '摩卡',
+                a => adjacent(posOf(a,'extra','奶泡'), posOf(a,'extra','糖')),
+                a => a[0] && a[0].coffee === '拿铁'
+            ],
+            target: { house: -1, key: 'book', value: '诗集' }
+        }
+    ];
+
+    // ============================================================
+    // 求解器：回溯搜索
+    // 输入：categories, clues, 房子数量（默认 5）
+    // 输出：{ solutions: [...], count }
+    // ============================================================
+    function solve(categories, clues, houseCount = 5) {
+        const keys = Object.keys(categories);
+        // 为每列构造一个排列迭代器（简化：直接递归枚举）
+        const solutions = [];
+        const MAX_SOLUTIONS = 500; // 超过则视为多解
+
+        // 每列当前排列
+        const assignment = Array.from({ length: houseCount }, () => ({}));
+
+        // 依次枚举每一列的所有排列，并剪枝
+        function permuteKey(keyIdx) {
+            if (solutions.length > MAX_SOLUTIONS) return;
+            if (keyIdx === keys.length) {
+                // 所有列都填完了，检查线索
+                if (clues.every(c => c(assignment))) {
+                    solutions.push(assignment.map(h => ({ ...h })));
+                }
+                return;
+            }
+            const key = keys[keyIdx];
+            const values = categories[key].values.slice();
+            // 生成 values 的全排列，赋给每栋房子
+            permuteValues(key, values, 0, () => permuteKey(keyIdx + 1));
+        }
+
+        function permuteValues(key, values, idx, onDone) {
+            if (solutions.length > MAX_SOLUTIONS) return;
+            if (idx === values.length) {
+                onDone();
+                return;
+            }
+            for (let i = idx; i < values.length; i++) {
+                [values[idx], values[i]] = [values[i], values[idx]];
+                assignment[idx][key] = values[idx];
+                // 剪枝：只保留当前层可能满足的线索（这里简化为不剪枝）
+                permuteValues(key, values, idx + 1, onDone);
+                [values[idx], values[i]] = [values[i], values[idx]];
+            }
+        }
+
+        permuteKey(0);
+        return { solutions, count: solutions.length };
+    }
+
+    // ============================================================
+    // 状态
+    // ============================================================
+    let currentIndex = 0;
+    let state = [];
+    let revealed = [];
+    let hintCount = 0;
+    let currentAnswer = null;  // 求解器算出的唯一解
+    let solveError = null;
+
+    const problemEl = document.getElementById('problem');
+    const wrap = document.getElementById('tableWrap');
+    const resultEl = document.getElementById('result');
+    const idxLabel = document.getElementById('idxLabel');
+    const totalLabel = document.getElementById('totalLabel');
+    const titleLabel = document.getElementById('titleLabel');
+
+    const current = () => PUZZLES[currentIndex];
+
+    // ============================================================
+    // 加载题目
+    // ============================================================
+    function loadPuzzle(index) {
+        currentIndex = ((index % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
+        const p = current();
+
+        state = Array.from({ length: 5 }, () => {
+            const obj = {};
+            for (const k of Object.keys(p.categories)) obj[k] = '';
+            return obj;
+        });
+        revealed = Array.from({ length: 5 }, () => ({}));
+        hintCount = 0;
+        resultEl.textContent = '';
+        resultEl.className = 'zebra-result';
+
+        idxLabel.textContent = currentIndex + 1;
+        totalLabel.textContent = PUZZLES.length;
+        titleLabel.textContent = p.title;
+
+        // 求唯一解
+        currentAnswer = null;
+        solveError = null;
+        const t0 = performance.now();
+        const res = solve(p.categories, p.clues, 5);
+        const dt = (performance.now() - t0).toFixed(0);
+        if (res.count === 1) {
+            currentAnswer = res.solutions[0];
+        } else {
+            solveError = `本题解的数量为 ${res.count > 500 ? '>500' : res.count}（应为 1），题目有误`;
+            console.warn(`[zebra] 题「${p.title}」解的数量=${res.count}，耗时 ${dt}ms`);
+        }
+
+        renderProblem();
+        renderTable();
+    }
+
+    function renderProblem() {
+        const p = current();
+        let html = `<b>题目：</b>${p.intro}<br><b>线索：</b><br>`;
+        p.clueTexts.forEach((c, i) => { html += `${i + 1}. ${c}<br>`; });
+        html += `<span class="q">问题：${p.question}</span>`;
+        problemEl.innerHTML = html;
+    }
+
+    function renderTable() {
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        let html = '<table class="zebra-table"><thead><tr><th style="width:70px;">房子</th>';
+        for (const k of cats) html += `<th>${p.categories[k].label}</th>`;
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < 5; i++) {
+            html += `<tr><td><b>第 ${i + 1} 栋</b></td>`;
+            for (const k of cats) {
+                const locked = revealed[i][k];
+                html += `<td data-house="${i}" data-cat="${k}" class="${locked ? 'correct' : ''}">`;
+                html += `<select data-house="${i}" data-cat="${k}" ${locked ? 'disabled' : ''}>`;
+                html += `<option value="">--</option>`;
+                for (const opt of p.categories[k].values) {
+                    const sel = state[i][k] === opt ? ' selected' : '';
+                    html += `<option value="${opt}"${sel}>${opt}</option>`;
+                }
+                html += `</select></td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+
+        wrap.querySelectorAll('select').forEach(sel => {
+            sel.onchange = () => {
+                const h = parseInt(sel.dataset.house, 10);
+                const c = sel.dataset.cat;
+                state[h][c] = sel.value;
+                // 清除该格的错误状态
+                sel.parentElement.classList.remove('wrong', 'conflict');
+            };
+        });
+    }
+
+    // ============================================================
+    // 检查：填满 + 所有线索满足
+    // ============================================================
+    function check() {
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        // 1. 是否填满
+        for (let i = 0; i < 5; i++) {
+            for (const k of cats) {
+                if (!state[i][k]) {
+                    resultEl.className = 'zebra-result warn';
+                    resultEl.textContent = '⚠️ 还有格子未填写';
+                    return;
+                }
+            }
+        }
+        // 2. 每列不重复
+        for (const k of cats) {
+            const vals = state.map(s => s[k]);
+            if (new Set(vals).size !== 5) {
+                resultEl.className = 'zebra-result warn';
+                resultEl.textContent = `⚠️ 「${p.categories[k].label}」列有重复`;
+                return;
+            }
+        }
+        // 3. 校验线索
+        const assign = state;
+        const failedClue = [];
+        p.clues.forEach((fn, i) => {
+            try {
+                if (!fn(assign)) failedClue.push(i + 1);
+            } catch (e) {
+                failedClue.push(i + 1);
+            }
+        });
+        if (failedClue.length > 0) {
+            resultEl.className = 'zebra-result error';
+            resultEl.textContent = `❌ 违反线索：第 ${failedClue.join('、')} 条`;
+            return;
+        }
+        // 4. 通过
+        resultEl.className = 'zebra-result';
+        const t = p.target;
+        if (t.house >= 0) {
+            resultEl.textContent = `🎉 完全正确！${p.categories[t.key].label}为「${t.value}」的是第 ${t.house + 1} 栋。`;
+        } else {
+            // 从答案里找
+            const idx = currentAnswer ? currentAnswer.findIndex(h => h[t.key] === t.value) : -1;
+            resultEl.textContent = `🎉 完全正确！${t.value}的是第 ${idx + 1} 栋。`;
+        }
+    }
+
+    // ============================================================
+    // 提示
+    // ============================================================
+    function hint() {
+        if (hintCount >= MAX_HINTS) {
+            resultEl.className = 'zebra-result warn';
+            resultEl.textContent = `⚠️ 本题提示次数已用完（${MAX_HINTS} 次）`;
+            return;
+        }
+        if (!currentAnswer) {
+            resultEl.className = 'zebra-result warn';
+            resultEl.textContent = '⚠️ 本题无唯一解，无法提示';
+            return;
+        }
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        // 找未填对的位置
+        const wrongSlots = [];
+        for (let i = 0; i < 5; i++) {
+            for (const k of cats) {
+                if (state[i][k] !== currentAnswer[i][k]) wrongSlots.push({ house: i, cat: k });
+            }
+        }
+        if (wrongSlots.length === 0) {
+            resultEl.className = 'zebra-result';
+            resultEl.textContent = '已经全部正确，无需提示。';
+            return;
+        }
+        const slot = wrongSlots[Math.floor(Math.random() * wrongSlots.length)];
+        state[slot.house][slot.cat] = currentAnswer[slot.house][slot.cat];
+        revealed[slot.house][slot.cat] = true;
+        hintCount++;
+        resultEl.className = 'zebra-result';
+        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${p.categories[slot.cat].label}」（剩余提示 ${MAX_HINTS - hintCount} 次）`;
+        renderTable();
+    }
+
+    // ============================================================
+    // 事件
+    // ============================================================
+    const MAX_HINTS = 3;
+
+    document.getElementById('btnCheck').onclick = check;
+    document.getElementById('btnHint').onclick = hint;
+    document.getElementById('btnReset').onclick = () => loadPuzzle(currentIndex);
+    document.getElementById('btnPrev').onclick = () => loadPuzzle(currentIndex - 1);
+    document.getElementById('btnNext').onclick = () => loadPuzzle(currentIndex + 1);
+    document.getElementById('btnRandom').onclick = () => {
+        if (PUZZLES.length <= 1) return;
+        let next;
+        do { next = Math.floor(Math.random() * PUZZLES.length); }
+        while (next === currentIndex);
+        loadPuzzle(next);
+    };
+
+    // 方向键切题：焦点在 select 上时忽略
+    document.addEventListener('keydown', e => {
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'select' || tag === 'input') return;
+        if (e.key === 'ArrowLeft') loadPuzzle(currentIndex - 1);
+        else if (e.key === 'ArrowRight') loadPuzzle(currentIndex + 1);
+    });
+
+    // 启动时自检
+    (function selfTest() {
+        console.log('[zebra] 启动自检开始…');
+        PUZZLES.forEach((p, i) => {
+            const res = solve(p.categories, p.clues, 5);
+            if (res.count !== 1) {
+                console.error(`[zebra] 题「${p.title}」解的数量 = ${res.count}（应为 1）`);
+            }
+        });
+        console.log('[zebra] 启动自检结束');
+    })();
+
+    loadPuzzle(0);
+    GameBridge.notifyReady();
+})();
+</script>
+</body>
+</html>
