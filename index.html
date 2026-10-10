@@ -4,54 +4,218 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1e293b">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>游戏空间</title>
 <link rel="stylesheet" href="css/common.css">
 </head>
 <body>
 <div class="container">
-    <nav class="game-nav" id="gameNav">
-        <button class="nav-btn active" data-game="tetris">俄罗斯方块</button>
-        <button class="nav-btn" data-game="sudoku">数独</button>
-        <button class="nav-btn" data-game="nonogram">数织</button>
-        <button class="nav-btn" data-game="chess">象棋</button>
-        <button class="nav-btn" data-game="klotski">华容道</button>
-        <button class="nav-btn" data-game="minesweeper">扫雷</button>
-        <button class="nav-btn" data-game="lightsout">灭灯</button>
-        <button class="nav-btn" data-game="graphcoloring">图着色</button>
-        <button class="nav-btn" data-game="zebra">斑马谜题</button>
+    <nav class="game-nav" id="gameNav" aria-label="游戏选择">
+        <button class="nav-btn" data-game="tetris" aria-pressed="false">俄罗斯方块</button>
+        <button class="nav-btn" data-game="sudoku" aria-pressed="false">数独</button>
+        <button class="nav-btn" data-game="nonogram" aria-pressed="false">数织</button>
+        <button class="nav-btn" data-game="chess" aria-pressed="false">象棋</button>
+        <button class="nav-btn" data-game="klotski" aria-pressed="false">华容道</button>
+        <button class="nav-btn" data-game="minesweeper" aria-pressed="false">扫雷</button>
+        <button class="nav-btn" data-game="lightsout" aria-pressed="false">灭灯</button>
+        <button class="nav-btn" data-game="graphcoloring" aria-pressed="false">图着色</button>
+        <button class="nav-btn" data-game="zebra" aria-pressed="false">斑马谜题</button>
     </nav>
 
     <main class="game-content">
-        <iframe id="gameFrame" src="games/tetris.html" title="游戏" allow="fullscreen"></iframe>
+        <iframe id="gameFrame" title="游戏" allow="fullscreen" loading="lazy"></iframe>
+        <div id="loading" class="loading-overlay">加载中…</div>
+        <div id="errorOverlay" class="error-overlay" hidden>
+            <div class="error-box">
+                <h2>加载失败</h2>
+                <p id="errorMsg">无法加载游戏页面</p>
+                <button class="btn" id="btnRetry">重试</button>
+            </div>
+        </div>
     </main>
 </div>
+
+<style>
+/* 加载/错误覆盖层：极小，直接内联，避免污染 common.css */
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--text-sub);
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 5;
+}
+.loading-overlay.show { opacity: 1; }
+
+.error-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 6;
+}
+.error-overlay[hidden] { display: none; }
+.error-box {
+    background: rgba(30, 41, 59, 0.98);
+    padding: 24px 32px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    text-align: center;
+    max-width: 90%;
+}
+.error-box h2 { color: var(--danger); font-size: 18px; margin-bottom: 8px; }
+.error-box p { color: var(--text-sub); font-size: 13px; margin-bottom: 16px; }
+</style>
 
 <script src="js/bridge.js"></script>
 <script>
 (function () {
     'use strict';
 
+    const GAMES = ['tetris','sudoku','nonogram','chess','klotski','minesweeper','lightsout','graphcoloring','zebra'];
+    const STORAGE_KEY = 'gameHub.lastGame';
     const frame = document.getElementById('gameFrame');
     const buttons = document.querySelectorAll('.nav-btn');
-    let currentGame = 'tetris';
+    const loadingEl = document.getElementById('loading');
+    const errorOverlay = document.getElementById('errorOverlay');
+    const errorMsg = document.getElementById('errorMsg');
+    const btnRetry = document.getElementById('btnRetry');
+    let currentGame = null;
+    let loadingTimer = null;
 
+    // ---------- 决定初始游戏 ----------
+    function pickInitialGame() {
+        const hash = (location.hash || '').replace(/^#/, '');
+        if (GAMES.includes(hash)) return hash;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (GAMES.includes(saved)) return saved;
+        } catch (e) {}
+        return 'tetris';
+    }
+
+    // ---------- 显示/隐藏加载态 ----------
+    function showLoading() {
+        loadingEl.classList.add('show');
+        clearTimeout(loadingTimer);
+        // 3 秒还没加载完，显示错误
+        loadingTimer = setTimeout(() => {
+            if (loadingEl.classList.contains('show')) {
+                showError('加载超时，请检查网络或重试');
+            }
+        }, 8000);
+    }
+    function hideLoading() {
+        loadingEl.classList.remove('show');
+        clearTimeout(loadingTimer);
+    }
+
+    function showError(msg) {
+        errorMsg.textContent = msg;
+        errorOverlay.hidden = false;
+        hideLoading();
+    }
+    function hideError() {
+        errorOverlay.hidden = true;
+    }
+
+    // ---------- 切换游戏 ----------
+    function switchGame(game, { updateHash = true } = {}) {
+        if (game === currentGame) return;
+        if (!GAMES.includes(game)) game = 'tetris';
+
+        // 通知旧 iframe 暂停
+        GameBridge.notifyPause(frame);
+
+        // 更新按钮状态
+        buttons.forEach(b => {
+            const active = b.dataset.game === game;
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        // 用 location.replace 而不是 frame.src，避免污染 session history
+        showLoading();
+        hideError();
+        try {
+            frame.contentWindow.location.replace(`games/${game}.html`);
+        } catch (e) {
+            // 首次加载，contentWindow.location 还不存在，回退到 src
+            frame.src = `games/${game}.html`;
+        }
+
+        currentGame = game;
+        try { localStorage.setItem(STORAGE_KEY, game); } catch (e) {}
+        if (updateHash && location.hash !== '#' + game) {
+            history.replaceState(null, '', '#' + game);
+        }
+    }
+
+    // ---------- iframe 事件 ----------
+    frame.addEventListener('load', () => {
+        hideLoading();
+        // 让键盘类游戏立即能响应按键
+        try { frame.contentWindow.focus(); } catch (e) {}
+    });
+    frame.addEventListener('error', () => {
+        showError('无法加载游戏页面');
+    });
+
+    // ---------- 按钮点击 ----------
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
-            const game = btn.dataset.game;
-            if (game === currentGame) return;
-
-            // 通知旧 iframe 暂停
-            GameBridge.notifyPause(frame);
-
-            // 更新激活状态
-            buttons.forEach(b => b.classList.toggle('active', b === btn));
-
-            // 切换 iframe 内容
-            frame.src = `games/${game}.html`;
-            currentGame = game;
+            switchGame(btn.dataset.game);
         });
     });
+
+    // ---------- hash 变化（浏览器前进/后退） ----------
+    window.addEventListener('hashchange', () => {
+        const hash = (location.hash || '').replace(/^#/, '');
+        if (GAMES.includes(hash) && hash !== currentGame) {
+            switchGame(hash, { updateHash: false });
+        }
+    });
+
+    // ---------- 页面可见性：切到后台时通知 iframe 暂停 ----------
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            GameBridge.notifyPause(frame);
+        } else {
+            // 恢复由用户主动切游戏触发，这里不强推 resume，避免误恢复
+        }
+    });
+
+    // ---------- 重试 ----------
+    btnRetry.addEventListener('click', () => {
+        hideError();
+        const g = currentGame;
+        currentGame = null;
+        switchGame(g);
+    });
+
+    // ---------- 启动 ----------
+    const initial = pickInitialGame();
+    // 先把按钮设对，再触发 switch
+    buttons.forEach(b => {
+        const active = b.dataset.game === initial;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    currentGame = null;
+    switchGame(initial, { updateHash: false });
+    if (location.hash !== '#' + initial) {
+        history.replaceState(null, '', '#' + initial);
+    }
 })();
 </script>
 </body>
