@@ -6,10 +6,36 @@
 <title>五子棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
+/* 水墨主题 */
+body.ink-theme {
+    background-color: #F5EFE0;
+    background-image:
+        repeating-linear-gradient(95deg,
+            rgba(180, 160, 120, 0.05) 0px,
+            rgba(180, 160, 120, 0.05) 1px,
+            transparent 1px,
+            transparent 4px),
+        repeating-linear-gradient(175deg,
+            rgba(160, 140, 100, 0.04) 0px,
+            rgba(160, 140, 100, 0.04) 1px,
+            transparent 1px,
+            transparent 6px),
+        radial-gradient(ellipse 60% 40% at 20% 15%,
+            rgba(80, 70, 50, 0.08) 0%,
+            transparent 70%),
+        radial-gradient(ellipse 50% 40% at 85% 90%,
+            rgba(80, 70, 50, 0.06) 0%,
+            transparent 70%),
+        linear-gradient(180deg, #F5EFE0 0%, #EBE2CE 100%);
+    color: #1A1A1A;
+    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
+}
+body.ink-theme::before { display: none; }
+
 .gomoku-layout {
     display: grid;
     grid-template-columns: auto 200px;
-    gap: 20px;
+    gap: 24px;
     align-items: flex-start;
     justify-content: center;
     width: 100%;
@@ -17,7 +43,7 @@
 .gomoku-board-wrap { display: flex; justify-content: center; align-items: center; }
 
 /* ============================================================
-   棋盘：木质 + 棋盘格线 + 星位
+   棋盘：宣纸底 + 淡墨格线 + 星位
    ============================================================ */
 .gomoku-board {
     position: relative;
@@ -25,39 +51,50 @@
     grid-template-columns: repeat(15, var(--cell, 32px));
     grid-template-rows: repeat(15, var(--cell, 32px));
     background:
-        radial-gradient(ellipse at center, rgba(255,255,255,0.35) 0%, rgba(0,0,0,0) 70%),
-        linear-gradient(135deg, #f3e2b6 0%, #ecd9a4 40%, #e6cd8f 100%);
-    border: 10px solid #6b4423;
-    border-radius: 6px;
+        radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(0,0,0,0) 70%),
+        repeating-linear-gradient(95deg,
+            rgba(180, 160, 120, 0.06) 0px,
+            rgba(180, 160, 120, 0.06) 1px,
+            transparent 1px,
+            transparent 3px),
+        repeating-linear-gradient(175deg,
+            rgba(160, 140, 100, 0.04) 0px,
+            rgba(160, 140, 100, 0.04) 1px,
+            transparent 1px,
+            transparent 5px),
+        linear-gradient(135deg, #F5EFE0 0%, #EBE2CE 60%, #E0D3B5 100%);
+    border: 12px solid #3A2E1F;
+    border-radius: 2px;
     box-shadow:
-        inset 0 0 0 2px #3a2412,
-        inset 0 0 0 3px #c9a86a,
-        inset 0 0 40px rgba(80, 40, 10, 0.25),
-        0 10px 30px rgba(0,0,0,0.6),
-        0 2px 6px rgba(0,0,0,0.4);
+        inset 0 0 0 1px #C9A961,
+        inset 0 0 0 2px rgba(44, 44, 44, 0.6),
+        inset 0 0 60px rgba(120, 90, 40, 0.2),
+        0 10px 30px rgba(44, 30, 10, 0.35),
+        0 2px 6px rgba(44, 30, 10, 0.25);
+    background-clip: padding-box;
     touch-action: manipulation;
+    box-sizing: content-box;
+    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
 }
 
-/* 木框纹理 */
+.chess-board-style::before,
 .gomoku-board::before {
     content: '';
     position: absolute;
-    inset: -10px;
-    border-radius: 6px;
+    inset: -12px;
+    border-radius: 2px;
     background:
-        repeating-linear-gradient(
-            92deg,
-            rgba(0,0,0,0.08) 0px,
-            rgba(0,0,0,0.08) 1px,
+        repeating-linear-gradient(92deg,
+            rgba(0,0,0,0.12) 0px,
+            rgba(0,0,0,0.12) 1px,
             transparent 1px,
-            transparent 3px
-        ),
-        linear-gradient(180deg, #7a4e26 0%, #5c3818 50%, #6b4423 100%);
+            transparent 4px),
+        linear-gradient(180deg, #4A3A28 0%, #2E2418 50%, #3A2E1F 100%);
     z-index: -1;
     pointer-events: none;
 }
 
-/* 棋盘格线（横竖各 15 条，落在每个单元格中心） */
+/* 棋盘格线 */
 .gomoku-board::after {
     content: '';
     position: absolute;
@@ -65,24 +102,24 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-        linear-gradient(to right, #4a2c14 1px, transparent 1px),
-        linear-gradient(to bottom, #4a2c14 1px, transparent 1px);
+        linear-gradient(to right, rgba(44, 44, 44, 0.65) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(44, 44, 44, 0.65) 1px, transparent 1px);
     background-size:
         var(--cell) var(--cell),
         var(--cell) var(--cell);
     background-position:
         calc(var(--cell) / 2) calc(var(--cell) / 2),
         calc(var(--cell) / 2) calc(var(--cell) / 2);
-    opacity: 0.85;
+    opacity: 0.75;
 }
 
-/* 星位（天元 + 4 个小目） */
+/* 星位 */
 .gomoku-star {
     position: absolute;
-    width: calc(var(--cell) * 0.26);
-    height: calc(var(--cell) * 0.26);
+    width: calc(var(--cell) * 0.24);
+    height: calc(var(--cell) * 0.24);
     border-radius: 50%;
-    background: #4a2c14;
+    background: #2C2C2C;
     transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 1;
@@ -90,7 +127,7 @@
 }
 
 /* ============================================================
-   交叉点（放置棋子的容器）
+   交叉点 & 棋子
    ============================================================ */
 .gomoku-point {
     position: relative;
@@ -101,7 +138,6 @@
     z-index: 2;
 }
 
-/* 棋子 */
 .gomoku-piece {
     width: calc(var(--cell, 32px) * 0.85);
     height: calc(var(--cell, 32px) * 0.85);
@@ -111,26 +147,26 @@
     animation: pieceDrop 0.18s ease;
 }
 
-/* 黑子 */
+/* 黑子：墨玉 */
 .gomoku-piece.black {
     background:
-        radial-gradient(circle at 35% 30%, #6a6a6a 0%, #3a3a3a 35%, #1a1a1a 70%, #000 100%);
+        radial-gradient(circle at 35% 30%, #4A4A4A 0%, #2C2C2C 35%, #1A1A1A 70%, #000 100%);
     box-shadow:
-        0 2px 4px rgba(0,0,0,0.6),
-        0 1px 2px rgba(0,0,0,0.4),
-        inset 0 2px 3px rgba(255,255,255,0.35),
-        inset 0 -3px 6px rgba(0,0,0,0.8);
+        0 2px 4px rgba(44, 30, 10, 0.6),
+        0 1px 2px rgba(44, 30, 10, 0.4),
+        inset 0 1px 2px rgba(255,255,255,0.25),
+        inset 0 -3px 6px rgba(0,0,0,0.85);
 }
 
-/* 白子 */
+/* 白子：白瓷 */
 .gomoku-piece.white {
     background:
-        radial-gradient(circle at 35% 30%, #ffffff 0%, #f5f5f5 35%, #e0e0e0 70%, #b8b8b8 100%);
+        radial-gradient(circle at 35% 30%, #FFFFFF 0%, #FAF6EC 35%, #EFE6CE 70%, #D8CAA8 100%);
     box-shadow:
-        0 2px 4px rgba(0,0,0,0.5),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 2px 3px rgba(255,255,255,0.95),
-        inset 0 -3px 6px rgba(120,120,120,0.6);
+        0 2px 4px rgba(44, 30, 10, 0.5),
+        0 1px 2px rgba(44, 30, 10, 0.3),
+        inset 0 1px 2px rgba(255,255,255,0.95),
+        inset 0 -3px 6px rgba(120, 100, 50, 0.4);
 }
 
 @keyframes pieceDrop {
@@ -138,88 +174,130 @@
     to { transform: scale(1); opacity: 1; }
 }
 
-/* 落子预览（鼠标悬停 / 触摸提示） */
-.gomoku-point.preview .gomoku-piece {
-    opacity: 0.35;
-}
+.gomoku-point.preview .gomoku-piece { opacity: 0.35; }
 
-/* 上一步高亮 */
+/* 上一步 */
 .gomoku-point.lastmove .gomoku-piece {
     box-shadow:
-        0 0 0 3px rgba(212, 175, 55, 0.9),
-        0 2px 6px rgba(0,0,0,0.5);
+        0 0 0 3px rgba(201, 169, 97, 0.9),
+        0 2px 6px rgba(44, 30, 10, 0.5);
 }
 
-/* 胜利连线高亮 */
+/* 胜利连线 */
 .gomoku-point.win .gomoku-piece {
     box-shadow:
-        0 0 0 3px var(--primary),
-        0 0 20px rgba(74, 222, 128, 0.9),
-        0 2px 6px rgba(0,0,0,0.5);
+        0 0 0 3px #B83B3B,
+        0 0 20px rgba(184, 59, 59, 0.9),
+        0 2px 6px rgba(44, 30, 10, 0.5);
     animation: winPulse 1s ease-in-out infinite;
 }
 @keyframes winPulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* 可落子位置（当轮到玩家且鼠标悬停） */
-.gomoku-point.hoverable:hover::after {
-    content: '';
-    position: absolute;
-    width: calc(var(--cell, 32px) * 0.5);
-    height: calc(var(--cell, 32px) * 0.5);
-    border-radius: 50%;
-    background: rgba(74, 222, 128, 0.4);
-    pointer-events: none;
+    50% { transform: scale(1.12); }
 }
 
 /* ============================================================
    侧栏
    ============================================================ */
-.gomoku-side { display: flex; flex-direction: column; gap: 10px; }
-.gomoku-side .card { font-size: 13px; }
-.gomoku-side .card b { color: var(--primary); }
-.gomoku-side select {
-    background: rgba(30,41,59,0.9);
-    color: var(--text);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 13px;
-    font-family: inherit;
-    width: 100%;
-    cursor: pointer;
-    outline: none;
-    min-height: 40px;
-}
+.gomoku-side { display: flex; flex-direction: column; gap: 12px; }
 
-/* 落子状态指示器 */
+.ink-card {
+    background: rgba(245, 239, 224, 0.85);
+    border: 1px solid rgba(44, 44, 44, 0.2);
+    padding: 14px;
+    border-radius: 2px;
+    font-family: "KaiTi", "STKaiti", serif;
+    color: #2C2C2C;
+    box-shadow:
+        inset 0 0 20px rgba(180, 160, 120, 0.15),
+        0 2px 8px rgba(80, 60, 30, 0.08);
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1.8;
+}
+.ink-card .card-title {
+    font-size: 13px;
+    color: #4A4A4A;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(44, 44, 44, 0.15);
+    padding-bottom: 6px;
+}
+.ink-card b { color: #B83B3B; font-weight: 700; }
+
 .turn-indicator {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 14px;
 }
 .turn-dot {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 .turn-dot.black {
-    background: radial-gradient(circle at 35% 30%, #6a6a6a 0%, #1a1a1a 70%, #000 100%);
-    box-shadow: inset 0 2px 2px rgba(255,255,255,0.3);
+    background: radial-gradient(circle at 35% 30%, #4A4A4A 0%, #1A1A1A 70%, #000 100%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25);
 }
 .turn-dot.white {
-    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e0e0 70%, #b8b8b8 100%);
-    box-shadow: inset 0 2px 2px rgba(255,255,255,0.9);
+    background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #EFE6CE 70%, #D8CAA8 100%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.95);
 }
+
+.ink-select {
+    background: rgba(245, 239, 224, 0.95);
+    color: #2C2C2C;
+    border: 1.5px solid #4A4A4A;
+    border-radius: 2px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: "KaiTi", "STKaiti", serif;
+    letter-spacing: 3px;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    min-height: 40px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%234A4A4A' stroke-width='1.5' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+.ink-select:focus { border-color: #B83B3B; }
+
+.ink-btn {
+    background: transparent;
+    color: #2C2C2C;
+    border: 1.5px solid #4A4A4A;
+    padding: 10px 20px;
+    font-family: "KaiTi", "STKaiti", serif;
+    font-size: 15px;
+    letter-spacing: 6px;
+    cursor: pointer;
+    border-radius: 2px;
+    min-height: 44px;
+    transition: all 0.2s;
+    width: 100%;
+}
+.ink-btn:hover:not(:disabled) {
+    background: rgba(44, 44, 44, 0.06);
+    border-color: #1A1A1A;
+}
+.ink-btn.primary {
+    background: #B83B3B;
+    color: #F5EFE0;
+    border-color: #8B2A2A;
+}
+.ink-btn.primary:hover:not(:disabled) { background: #8B2A2A; }
+.ink-btn:active:not(:disabled) { transform: translateY(1px); }
 
 @media (max-width: 1023px) {
     .gomoku-layout { grid-template-columns: auto 170px; gap: 14px; }
 }
-
 @media (max-width: 767px) {
     .gomoku-layout {
         grid-template-columns: 1fr;
@@ -227,9 +305,8 @@
         align-items: center;
         justify-items: center;
     }
-    .gomoku-board { border-width: 6px; }
-    .gomoku-board::before { inset: -6px; }
-
+    .gomoku-board { border-width: 8px; }
+    .gomoku-board::before { inset: -8px; }
     .gomoku-side {
         flex-direction: row;
         flex-wrap: wrap;
@@ -237,41 +314,77 @@
         width: 100%;
         gap: 8px;
     }
-    .gomoku-side .card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
-    .gomoku-side select { font-size: 12px; padding: 6px; min-height: 36px; }
-    .gomoku-side .btn { flex: 1 1 45%; font-size: 13px; }
+    .ink-card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
+    .ink-select { font-size: 13px; padding: 6px 30px 6px 8px; min-height: 36px; letter-spacing: 2px; }
+    .ink-btn { flex: 1 1 45%; font-size: 14px; letter-spacing: 4px; }
 }
+
+/* 水墨模态框 */
+body.ink-theme .modal-box {
+    background: #F5EFE0;
+    border: 1px solid #4A4A4A;
+    border-radius: 2px;
+    box-shadow:
+        inset 0 0 40px rgba(180, 160, 120, 0.2),
+        0 20px 60px rgba(44, 30, 10, 0.3);
+    font-family: "KaiTi", "STKaiti", serif;
+    padding: 40px 48px;
+    max-width: 90vw;
+    width: 420px;
+}
+body.ink-theme .modal-box h2 {
+    color: #1A1A1A;
+    font-size: 26px;
+    letter-spacing: 6px;
+    margin-bottom: 16px;
+    font-weight: 400;
+}
+body.ink-theme .modal-box p {
+    color: #4A4A4A;
+    font-size: 15px;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+}
+body.ink-theme .modal-box .big-value {
+    color: #B83B3B;
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-family: "KaiTi", "STKaiti", serif;
+}
+body.ink-theme .modal-actions { display: flex; gap: 12px; justify-content: center; }
+body.ink-theme .modal-actions .ink-btn { flex: 1; }
 </style>
 </head>
-<body class="embedded">
+<body class="embedded ink-theme">
 <div class="game-inner">
     <div class="gomoku-layout">
         <div class="gomoku-board-wrap">
             <div id="board" class="gomoku-board"></div>
         </div>
         <div class="gomoku-side">
-            <div class="card">
-                <div class="card-title">对局状态</div>
+            <div class="ink-card">
+                <div class="card-title">对局</div>
                 <div class="turn-indicator">
                     <div class="turn-dot" id="turnDot"></div>
-                    <span>当前：<b id="turnLabel">黑方</b></span>
+                    <span>行棋：<b id="turnLabel">黑方</b></span>
                 </div>
-                <div style="margin-top:6px;">你执：<b id="playerSide">黑方</b></div>
+                <div style="margin-top:6px;">执：<b id="playerSide">黑方</b></div>
             </div>
-            <div class="card">
-                <div class="card-title">AI 棋力</div>
-                <select id="aiLevel">
-                    <option value="1">简单</option>
-                    <option value="2" selected>普通</option>
-                    <option value="3">困难</option>
+            <div class="ink-card">
+                <div class="card-title">棋力</div>
+                <select id="aiLevel" class="ink-select">
+                    <option value="1">入门</option>
+                    <option value="2" selected>进阶</option>
+                    <option value="3">高手</option>
                 </select>
             </div>
-            <button class="btn" id="btnNew">新对局</button>
-            <button class="btn ghost" id="btnUndo">悔棋</button>
-            <button class="btn ghost" id="btnSwap">切换先手</button>
-            <div class="card" style="font-size:12px; line-height:1.7; color: var(--text-sub);">
-                <div class="card-title">操作</div>
-                点击棋盘交叉点落子
+            <button class="ink-btn primary" id="btnNew">新　局</button>
+            <button class="ink-btn" id="btnUndo">悔　棋</button>
+            <button class="ink-btn" id="btnSwap">换　手</button>
+            <div class="ink-card" style="font-size:12px;">
+                <div class="card-title">手谈</div>
+                点棋盘交叉点落子
             </div>
         </div>
     </div>
@@ -279,11 +392,11 @@
 
 <div class="modal" id="endModal">
     <div class="modal-box">
-        <h2 id="endModalTitle">对局结束</h2>
+        <h2 id="endModalTitle">对局终了</h2>
         <p id="endModalSub">——</p>
         <div class="modal-actions">
-            <button class="btn" id="btnEndNew">新对局</button>
-            <button class="btn ghost" id="btnEndClose">关闭</button>
+            <button class="ink-btn primary" id="btnEndNew">再　来</button>
+            <button class="ink-btn" id="btnEndClose">收　子</button>
         </div>
     </div>
 </div>
@@ -293,22 +406,20 @@
 (function () {
     'use strict';
 
-    document.body.classList.add('embedded');
+    document.body.classList.add('embedded', 'ink-theme');
+    GameBridge.notifyReady();
 
-    const SIZE = 15; // 15×15 标准棋盘
+    const SIZE = 15;
     const EMPTY = 0, BLACK = 1, WHITE = 2;
 
-    // ============================================================
-    // 状态
-    // ============================================================
-    let board;              // 15×15 数组
-    let playerSide;         // BLACK 或 WHITE
-    let turn;               // BLACK 或 WHITE
+    let board;
+    let playerSide;
+    let turn;
     let gameOver;
     let aiThinking;
-    let lastMove;           // {x, y}
-    let history;            // 悔棋用
-    let winCells;           // 胜利连线坐标
+    let lastMove;
+    let history;
+    let winCells;
     let aiTimerId = null;
 
     const boardEl = document.getElementById('board');
@@ -322,31 +433,24 @@
     const btnEndNew = document.getElementById('btnEndNew');
     const btnEndClose = document.getElementById('btnEndClose');
 
-    // ============================================================
-    // 尺寸
-    // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.gomoku-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const frame = 20; // 木框两侧
+        const frame = 28;
         const availW = vw - frame - 4;
         const availH = vh - 240;
         const byW = Math.floor(availW / SIZE);
         const byH = Math.floor(availH / SIZE);
-        return Math.max(18, Math.min(byW, byH, 40));
+        return Math.max(16, Math.min(byW, byH, 40));
     }
 
-    // ============================================================
-    // 构建棋盘
-    // ============================================================
     let pointEls = null;
 
     function buildBoardDOM() {
         boardEl.innerHTML = '';
         pointEls = new Array(SIZE * SIZE);
 
-        // 星位（15×15 标准：天元 + 4 个星位）
         const stars = [
             [3, 3], [11, 3], [7, 7], [3, 11], [11, 11]
         ];
@@ -365,17 +469,9 @@
             }
         }
 
-        // 星位标记
         stars.forEach(([x, y]) => {
             const star = document.createElement('div');
             star.className = 'gomoku-star';
-            // 星位在交叉点上，位置 = (x + 0.5) * cell 的相对位置
-            // 因为每个 point 是 cell 宽，交叉点在 point 中心
-            // 我们用 point 的位置 + 0.5 格
-            star.style.left = `calc((var(--cell) + var(--cell)) * ${x + 0.5})`;
-            star.style.top = `calc((var(--cell) + var(--cell)) * ${y + 0.5})`;
-            // 修正：point 宽度等于 cell，但棋盘 grid 是 15 列 cell，星位应该在
-            // 第 (x) 列 point 的中心 = x * cell + cell/2
             star.style.left = `calc(var(--cell) * ${x} + var(--cell) / 2)`;
             star.style.top = `calc(var(--cell) * ${y} + var(--cell) / 2)`;
             boardEl.appendChild(star);
@@ -396,7 +492,6 @@
                 const el = pointEls[y * SIZE + x];
                 el.className = 'gomoku-point';
                 const p = board[y][x];
-                // 只重建棋子
                 el.innerHTML = '';
                 if (p !== EMPTY) {
                     const piece = document.createElement('div');
@@ -405,14 +500,10 @@
                 }
                 if (lastMove && lastMove.x === x && lastMove.y === y) el.classList.add('lastmove');
                 if (winCells && winCells.some(c => c.x === x && c.y === y)) el.classList.add('win');
-                if (!gameOver && turn === playerSide && p === EMPTY) el.classList.add('hoverable');
             }
         }
         turnDot.className = 'turn-dot ' + (turn === BLACK ? 'black' : 'white');
         turnLabel.textContent = turn === BLACK ? '黑方' : '白方';
-        if (!aiThinking && !gameOver) {
-            turnLabel.textContent = (turn === BLACK ? '黑方' : '白方');
-        }
     }
 
     function onHover(x, y, entering) {
@@ -431,17 +522,12 @@
         }
     }
 
-    // ============================================================
-    // 落子
-    // ============================================================
     function onClick(x, y) {
         if (gameOver || aiThinking) return;
         if (turn !== playerSide) return;
         if (board[y][x] !== EMPTY) return;
-
         doMove(x, y, playerSide);
         render();
-
         if (!gameOver) scheduleAI();
     }
 
@@ -456,15 +542,14 @@
             winCells = win;
             gameOver = true;
             showEndModal(
-                side === BLACK ? '黑方获胜' : '白方获胜',
-                `五子连线（${win.length} 子）`
+                side === BLACK ? '黑方胜' : '白方胜',
+                `五子连珠`
             );
             return;
         }
-        // 棋盘满 = 和棋
         if (history.length === SIZE * SIZE) {
             gameOver = true;
-            showEndModal('和棋', '棋盘已满');
+            showEndModal('和　棋', '棋满无胜负');
         }
     }
 
@@ -472,74 +557,54 @@
         const dirs = [[1,0],[0,1],[1,1],[1,-1]];
         for (const [dx, dy] of dirs) {
             const cells = [{ x, y }];
-            // 正方向
             let nx = x + dx, ny = y + dy;
             while (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === side) {
                 cells.push({ x: nx, y: ny });
                 nx += dx; ny += dy;
             }
-            // 反方向
             nx = x - dx; ny = y - dy;
             while (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === side) {
                 cells.unshift({ x: nx, y: ny });
                 nx -= dx; ny -= dy;
             }
-            if (cells.length >= 5) {
-                // 返回连线（只取前 5 个即可，或者全部返回用于高亮）
-                return cells;
-            }
+            if (cells.length >= 5) return cells;
         }
         return null;
     }
 
-    // ============================================================
-    // AI：评分 + 一层搜索
-    // ============================================================
-    // 五种棋型分值
     const SCORE = {
-        FIVE: 1000000,      // 五连
-        LIVE_FOUR: 100000,  // 活四
-        RUSH_FOUR: 10000,   // 冲四
-        LIVE_THREE: 8000,   // 活三
-        SLEEP_THREE: 1000,  // 眠三
-        LIVE_TWO: 500,      // 活二
-        SLEEP_TWO: 100,     // 眠二
-        LIVE_ONE: 10,       // 活一
+        FIVE: 1000000,
+        LIVE_FOUR: 100000,
+        RUSH_FOUR: 10000,
+        LIVE_THREE: 8000,
+        SLEEP_THREE: 1000,
+        LIVE_TWO: 500,
+        SLEEP_TWO: 100,
+        LIVE_ONE: 10
     };
 
-    // 评估某点落下 side 后形成的棋型分值
     function evaluatePoint(x, y, side) {
-        // 临时落子
         board[y][x] = side;
-        const opp = side === BLACK ? WHITE : BLACK;
         let score = 0;
-
-        // 4 个方向分别评估
         const dirs = [[1,0],[0,1],[1,1],[1,-1]];
         for (const [dx, dy] of dirs) {
-            // 统计以 (x,y) 为中心的连线长度和开放端
             let count = 1;
             let openLeft = 0, openRight = 0;
-            // 正方向
             let nx = x + dx, ny = y + dy;
             while (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === side) {
                 count++;
                 nx += dx; ny += dy;
             }
             if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === EMPTY) openRight = 1;
-            // 反方向
             nx = x - dx; ny = y - dy;
             while (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === side) {
                 count++;
                 nx -= dx; ny -= dy;
             }
             if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && board[ny][nx] === EMPTY) openLeft = 1;
-
-            const open = openLeft + openRight;
-            score += scoreByCount(count, open);
+            score += scoreByCount(count, openLeft + openRight);
         }
-
-        board[y][x] = EMPTY; // 撤销
+        board[y][x] = EMPTY;
         return score;
     }
 
@@ -567,7 +632,6 @@
         return 0;
     }
 
-    // 生成候选点（已有棋子周围 2 格内的空点）
     function getCandidates() {
         const cands = new Set();
         for (let y = 0; y < SIZE; y++) {
@@ -583,7 +647,6 @@
                 }
             }
         }
-        // 空盘：下天元
         if (cands.size === 0) cands.add(7 * SIZE + 7);
         return Array.from(cands).map(i => ({ x: i % SIZE, y: Math.floor(i / SIZE) }));
     }
@@ -593,63 +656,44 @@
         const side = turn;
         const opp = side === BLACK ? WHITE : BLACK;
         const level = parseInt(aiLevelEl.value, 10);
-
         const candidates = getCandidates();
 
-        // 评估每个候选点：
-        //   myScore  = 我下这里能形成的棋型
-        //   oppScore = 对手下这里能形成的棋型（用于防守）
-        // 综合分 = myScore * attackWeight + oppScore * defenseWeight
         const attackWeight = 1.0;
-        const defenseWeight = 1.1; // 防守略优先，避免被五连
+        const defenseWeight = 1.1;
 
         const scored = candidates.map(c => {
             const myScore = evaluatePoint(c.x, c.y, side);
             const oppScore = evaluatePoint(c.x, c.y, opp);
-            const total = myScore * attackWeight + oppScore * defenseWeight;
-            return { ...c, myScore, oppScore, total };
+            return { ...c, myScore, oppScore, total: myScore * attackWeight + oppScore * defenseWeight };
         });
 
-        // 简单棋力：随机选前 N 个里一个
-        // 普通：选最高
-        // 困难：选最高 + 避开必输
         scored.sort((a, b) => b.total - a.total);
 
         let pick;
         if (level === 1) {
-            // 简单：从前 5 随机
             const top = scored.slice(0, Math.min(5, scored.length));
             pick = top[Math.floor(Math.random() * top.length)];
         } else if (level === 2) {
-            // 普通：最高
             pick = scored[0];
         } else {
-            // 困难：最高 + 深度 2 搜索
             pick = pickBestMove(side, candidates);
         }
 
-        if (pick) {
-            doMove(pick.x, pick.y, side);
-        }
+        if (pick) doMove(pick.x, pick.y, side);
     }
 
-    // 困难模式：一层搜索 + 对手最佳应对
     function pickBestMove(side, candidates) {
         const opp = side === BLACK ? WHITE : BLACK;
         let best = null;
         let bestScore = -Infinity;
 
         for (const c of candidates) {
-            // 模拟我落子
             board[c.y][c.x] = side;
-            // 评估我这一步的即时收益
             let myScore = evaluatePoint(c.x, c.y, side);
-            // 检查是否能立即赢
             if (checkWin(c.x, c.y, side)) {
                 board[c.y][c.x] = EMPTY;
                 return c;
             }
-            // 对手最佳应对（只评估对手能形成的最强棋型）
             let oppBest = 0;
             const oppCands = getCandidates();
             for (const oc of oppCands) {
@@ -670,7 +714,7 @@
         if (gameOver || turn === playerSide) return;
         if (aiTimerId) clearTimeout(aiTimerId);
         aiThinking = true;
-        turnLabel.textContent = 'AI 思考中…';
+        turnLabel.textContent = '思　索';
         aiTimerId = setTimeout(() => {
             aiTimerId = null;
             aiMove();
@@ -679,12 +723,8 @@
         }, 30);
     }
 
-    // ============================================================
-    // 悔棋
-    // ============================================================
     function undo() {
         if (history.length === 0 || aiThinking) return;
-        // 至少撤销到玩家回合
         do {
             const last = history.pop();
             board[last.y][last.x] = EMPTY;
@@ -700,9 +740,6 @@
         render();
     }
 
-    // ============================================================
-    // 弹窗
-    // ============================================================
     function showEndModal(title, sub) {
         endModalTitle.textContent = title;
         endModalSub.textContent = sub;
@@ -710,9 +747,6 @@
         aiThinking = false;
     }
 
-    // ============================================================
-    // 生命周期
-    // ============================================================
     function newGame() {
         if (aiTimerId) { clearTimeout(aiTimerId); aiTimerId = null; }
         board = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
@@ -747,7 +781,6 @@
     playerSide = BLACK;
     buildBoardDOM();
     newGame();
-    GameBridge.notifyReady();
 })();
 </script>
 </body>
