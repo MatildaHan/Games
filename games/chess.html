@@ -464,4 +464,157 @@
             const p = board[y][x];
             if (!p) continue;
             if (side === 'red' && !isRed(p)) continue;
-            if (side
+            if (side === 'black' && !isBlack(p)) continue;
+            if (getLegalMoves(x, y).length > 0) { hasLegal = true; break; }
+        }
+        if (!hasLegal) {
+            gameOver = true;
+            const winner = side === 'red' ? '黑方' : '红方';
+            const reason = isInCheck(side) ? '将死' : '困毙';
+            setTimeout(() => alert(`${winner}${reason}！${side === 'red' ? '黑' : '红'}方获胜`), 100);
+        }
+    }
+
+    // ---------- AI ----------
+    function evaluate() {
+        let s = 0;
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
+            const p = board[y][x];
+            if (!p) continue;
+            const v = VALUES[p.toLowerCase()];
+            s += isRed(p) ? v : -v;
+        }
+        return s;
+    }
+
+    function getAllLegalMoves(side) {
+        const result = [];
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
+            const p = board[y][x];
+            if (!p) continue;
+            if (side === 'red' && !isRed(p)) continue;
+            if (side === 'black' && !isBlack(p)) continue;
+            getLegalMoves(x, y).forEach(m => result.push({ from: { x, y }, to: m }));
+        }
+        // 着法排序：先吃子、吃价值高的优先
+        result.sort((a, b) => {
+            const va = board[a.to.y][a.to.x] ? VALUES[board[a.to.y][a.to.x].toLowerCase()] : 0;
+            const vb = board[b.to.y][b.to.x] ? VALUES[board[b.to.y][b.to.x].toLowerCase()] : 0;
+            return vb - va;
+        });
+        return result;
+    }
+
+    function minimax(depth, alpha, beta, maximizing) {
+        if (depth === 0) return evaluate();
+        // 终止：一方将/帅已被吃
+        if (!findKing('red')) return 999999;
+        if (!findKing('black')) return -999999;
+        const side = maximizing ? 'red' : 'black';
+        const moves = getAllLegalMoves(side);
+        if (moves.length === 0) return maximizing ? -999999 : 999999;
+        if (maximizing) {
+            let best = -Infinity;
+            for (const mv of moves) {
+                const cap = board[mv.to.y][mv.to.x];
+                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
+                board[mv.from.y][mv.from.x] = 0;
+                const v = minimax(depth - 1, alpha, beta, false);
+                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
+                board[mv.to.y][mv.to.x] = cap;
+                best = Math.max(best, v);
+                alpha = Math.max(alpha, v);
+                if (beta <= alpha) break;
+            }
+            return best;
+        } else {
+            let best = Infinity;
+            for (const mv of moves) {
+                const cap = board[mv.to.y][mv.to.x];
+                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
+                board[mv.from.y][mv.from.x] = 0;
+                const v = minimax(depth - 1, alpha, beta, true);
+                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
+                board[mv.to.y][mv.to.x] = cap;
+                best = Math.min(best, v);
+                beta = Math.min(beta, v);
+                if (beta <= alpha) break;
+            }
+            return best;
+        }
+    }
+
+    function scheduleAI() {
+        if (gameOver || turn === playerSide) return;
+        aiThinking = true;
+        turnLabel.textContent = 'AI 思考中…';
+        setTimeout(() => {
+            aiPlay();
+            aiThinking = false;
+            render();
+        }, 30);
+    }
+
+    function aiPlay() {
+        if (gameOver || turn === playerSide) return;
+        const depth = parseInt(aiDepthEl.value, 10);
+        const side = turn;
+        const maximizing = side === 'red';
+        const moves = getAllLegalMoves(side);
+        if (moves.length === 0) return;
+
+        let bestVal = maximizing ? -Infinity : Infinity;
+        let bestMoves = [];
+        for (const mv of moves) {
+            const cap = board[mv.to.y][mv.to.x];
+            board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
+            board[mv.from.y][mv.from.x] = 0;
+            const v = minimax(depth - 1, -Infinity, Infinity, !maximizing);
+            board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
+            board[mv.to.y][mv.to.x] = cap;
+            if (maximizing ? v > bestVal : v < bestVal) {
+                bestVal = v;
+                bestMoves = [mv];
+            } else if (v === bestVal) {
+                bestMoves.push(mv);
+            }
+        }
+        if (bestMoves.length > 0) {
+            const mv = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            doMove(mv);
+        }
+    }
+
+    function newGame() {
+        board = JSON.parse(JSON.stringify(INIT));
+        selected = null; validMoves = [];
+        turn = 'red';
+        gameOver = false;
+        aiThinking = false;
+        lastMove = null;
+        history = [];
+        playerSideEl.textContent = playerSide === 'red' ? '红方' : '黑方';
+        render();
+        if (playerSide === 'black') scheduleAI();
+    }
+
+    document.getElementById('btnNew').onclick = newGame;
+    document.getElementById('btnUndo').onclick = undo;
+    document.getElementById('btnSwap').onclick = () => {
+        playerSide = playerSide === 'red' ? 'black' : 'red';
+        newGame();
+    };
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(render, 150);
+    });
+
+    playerSide = 'red';
+    newGame();
+    GameBridge.notifyReady();
+})();
+</script>
+</body>
+</html>
