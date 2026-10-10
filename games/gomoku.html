@@ -6,7 +6,6 @@
 <title>五子棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-/* 水墨主题 */
 body.ink-theme {
     background-color: #F5EFE0;
     background-image:
@@ -42,9 +41,6 @@ body.ink-theme::before { display: none; }
 }
 .gomoku-board-wrap { display: flex; justify-content: center; align-items: center; }
 
-/* ============================================================
-   棋盘：宣纸底 + 淡墨格线 + 星位
-   ============================================================ */
 .gomoku-board {
     position: relative;
     display: grid;
@@ -77,7 +73,6 @@ body.ink-theme::before { display: none; }
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
 }
 
-.chess-board-style::before,
 .gomoku-board::before {
     content: '';
     position: absolute;
@@ -94,7 +89,6 @@ body.ink-theme::before { display: none; }
     pointer-events: none;
 }
 
-/* 棋盘格线 */
 .gomoku-board::after {
     content: '';
     position: absolute;
@@ -113,7 +107,6 @@ body.ink-theme::before { display: none; }
     opacity: 0.75;
 }
 
-/* 星位 */
 .gomoku-star {
     position: absolute;
     width: calc(var(--cell) * 0.24);
@@ -126,9 +119,6 @@ body.ink-theme::before { display: none; }
     opacity: 0.85;
 }
 
-/* ============================================================
-   交叉点 & 棋子
-   ============================================================ */
 .gomoku-point {
     position: relative;
     display: flex;
@@ -147,7 +137,6 @@ body.ink-theme::before { display: none; }
     animation: pieceDrop 0.18s ease;
 }
 
-/* 黑子：墨玉 */
 .gomoku-piece.black {
     background:
         radial-gradient(circle at 35% 30%, #4A4A4A 0%, #2C2C2C 35%, #1A1A1A 70%, #000 100%);
@@ -157,8 +146,6 @@ body.ink-theme::before { display: none; }
         inset 0 1px 2px rgba(255,255,255,0.25),
         inset 0 -3px 6px rgba(0,0,0,0.85);
 }
-
-/* 白子：白瓷 */
 .gomoku-piece.white {
     background:
         radial-gradient(circle at 35% 30%, #FFFFFF 0%, #FAF6EC 35%, #EFE6CE 70%, #D8CAA8 100%);
@@ -175,15 +162,11 @@ body.ink-theme::before { display: none; }
 }
 
 .gomoku-point.preview .gomoku-piece { opacity: 0.35; }
-
-/* 上一步 */
 .gomoku-point.lastmove .gomoku-piece {
     box-shadow:
         0 0 0 3px rgba(201, 169, 97, 0.9),
         0 2px 6px rgba(44, 30, 10, 0.5);
 }
-
-/* 胜利连线 */
 .gomoku-point.win .gomoku-piece {
     box-shadow:
         0 0 0 3px #B83B3B,
@@ -196,9 +179,6 @@ body.ink-theme::before { display: none; }
     50% { transform: scale(1.12); }
 }
 
-/* ============================================================
-   侧栏
-   ============================================================ */
 .gomoku-side { display: flex; flex-direction: column; gap: 12px; }
 
 .ink-card {
@@ -298,62 +278,76 @@ body.ink-theme::before { display: none; }
 @media (max-width: 1023px) {
     .gomoku-layout { grid-template-columns: auto 170px; gap: 14px; }
 }
+
+/* ============================================================
+   手机端：棋盘铺满屏宽，侧栏移到下方
+   ============================================================ */
 @media (max-width: 767px) {
+    body.ink-theme { padding: 0; }
+
     .gomoku-layout {
         grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: center;
-        justify-items: center;
+        gap: 10px;
+        align-items: stretch;
+        justify-items: stretch;
+        width: 100%;
+        padding: 0 6px;
+        box-sizing: border-box;
     }
-    .gomoku-board { border-width: 8px; }
+    .gomoku-board-wrap {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    /* 关键：棋盘宽度铺满 */
+    .gomoku-board {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        border-width: 8px;
+        box-shadow:
+            inset 0 0 0 1px #C9A961,
+            inset 0 0 0 2px rgba(44, 44, 44, 0.6),
+            inset 0 0 30px rgba(120, 90, 40, 0.2),
+            0 6px 16px rgba(44, 30, 10, 0.3);
+    }
     .gomoku-board::before { inset: -8px; }
+
+    /* 侧栏横排 */
     .gomoku-side {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
+        align-items: stretch;
         width: 100%;
-        gap: 8px;
+        gap: 6px;
     }
-    .ink-card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
-    .ink-select { font-size: 13px; padding: 6px 30px 6px 8px; min-height: 36px; letter-spacing: 2px; }
-    .ink-btn { flex: 1 1 45%; font-size: 14px; letter-spacing: 4px; }
+    .ink-card {
+        flex: 1 1 100%;
+        padding: 8px 12px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .ink-card .card-title {
+        font-size: 12px;
+        letter-spacing: 3px;
+        margin-bottom: 4px;
+        padding-bottom: 4px;
+    }
+    .ink-select {
+        font-size: 13px;
+        padding: 6px 28px 6px 8px;
+        min-height: 36px;
+        letter-spacing: 2px;
+    }
+    .ink-btn {
+        flex: 1 1 calc(33% - 6px);
+        font-size: 14px;
+        letter-spacing: 3px;
+        padding: 8px 10px;
+        min-height: 42px;
+    }
 }
-
-/* 水墨模态框 */
-body.ink-theme .modal-box {
-    background: #F5EFE0;
-    border: 1px solid #4A4A4A;
-    border-radius: 2px;
-    box-shadow:
-        inset 0 0 40px rgba(180, 160, 120, 0.2),
-        0 20px 60px rgba(44, 30, 10, 0.3);
-    font-family: "KaiTi", "STKaiti", serif;
-    padding: 40px 48px;
-    max-width: 90vw;
-    width: 420px;
-}
-body.ink-theme .modal-box h2 {
-    color: #1A1A1A;
-    font-size: 26px;
-    letter-spacing: 6px;
-    margin-bottom: 16px;
-    font-weight: 400;
-}
-body.ink-theme .modal-box p {
-    color: #4A4A4A;
-    font-size: 15px;
-    letter-spacing: 3px;
-    margin-bottom: 20px;
-}
-body.ink-theme .modal-box .big-value {
-    color: #B83B3B;
-    font-size: 42px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    font-family: "KaiTi", "STKaiti", serif;
-}
-body.ink-theme .modal-actions { display: flex; gap: 12px; justify-content: center; }
-body.ink-theme .modal-actions .ink-btn { flex: 1; }
 </style>
 </head>
 <body class="embedded ink-theme">
@@ -369,7 +363,7 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
                     <div class="turn-dot" id="turnDot"></div>
                     <span>行棋：<b id="turnLabel">黑方</b></span>
                 </div>
-                <div style="margin-top:6px;">执：<b id="playerSide">黑方</b></div>
+                <div style="margin-top:4px;">执：<b id="playerSide">黑方</b></div>
             </div>
             <div class="ink-card">
                 <div class="card-title">棋力</div>
@@ -382,10 +376,6 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
             <button class="ink-btn primary" id="btnNew">新　局</button>
             <button class="ink-btn" id="btnUndo">悔　棋</button>
             <button class="ink-btn" id="btnSwap">换　手</button>
-            <div class="ink-card" style="font-size:12px;">
-                <div class="card-title">手谈</div>
-                点棋盘交叉点落子
-            </div>
         </div>
     </div>
 </div>
@@ -433,16 +423,21 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
     const btnEndNew = document.getElementById('btnEndNew');
     const btnEndClose = document.getElementById('btnEndClose');
 
+    // ============================================================
+    // 棋盘尺寸：手机端铺满屏宽
+    // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.gomoku-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const frame = 28;
-        const availW = vw - frame - 4;
-        const availH = vh - 240;
+        const isMobile = window.innerWidth <= 767;
+
+        const frame = isMobile ? 16 : 24;    // 木框 8px×2 手机 / 12px×2 桌面
+        const availW = vw - frame;
+        const availH = isMobile ? vh - 280 : vh - 240;
         const byW = Math.floor(availW / SIZE);
         const byH = Math.floor(availH / SIZE);
-        return Math.max(16, Math.min(byW, byH, 40));
+        return Math.max(16, Math.min(byW, byH, isMobile ? 32 : 40));
     }
 
     let pointEls = null;
