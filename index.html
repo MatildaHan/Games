@@ -25,7 +25,7 @@
     </nav>
 
     <main class="game-content">
-        <iframe id="gameFrame" title="游戏" allow="fullscreen" loading="lazy"></iframe>
+        <iframe id="gameFrame" title="游戏" allow="fullscreen"></iframe>
         <div id="loading" class="loading-overlay">加载中…</div>
         <div id="errorOverlay" class="error-overlay" hidden>
             <div class="error-box">
@@ -38,7 +38,6 @@
 </div>
 
 <style>
-/* 加载/错误覆盖层：极小，直接内联，避免污染 common.css */
 .loading-overlay {
     position: absolute;
     inset: 0;
@@ -62,8 +61,6 @@
     align-items: center;
     justify-content: center;
     background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     z-index: 6;
 }
 .error-overlay[hidden] { display: none; }
@@ -98,7 +95,6 @@
     let currentGame = null;
     let loadingTimer = null;
 
-    // ---------- 决定初始游戏 ----------
     function pickInitialGame() {
         const hash = (location.hash || '').replace(/^#/, '');
         if (GAMES.includes(hash)) return hash;
@@ -109,15 +105,15 @@
         return 'tetris';
     }
 
-    // ---------- 加载态 ----------
     function showLoading() {
         loadingEl.classList.add('show');
         clearTimeout(loadingTimer);
+        // 关键修复 5：超时 12 秒（原来 8 秒太短）
         loadingTimer = setTimeout(() => {
             if (loadingEl.classList.contains('show')) {
                 showError('加载超时，请检查网络或重试');
             }
-        }, 8000);
+        }, 12000);
     }
     function hideLoading() {
         loadingEl.classList.remove('show');
@@ -132,15 +128,12 @@
         errorOverlay.hidden = true;
     }
 
-    // ---------- 切换游戏 ----------
     function switchGame(game, { updateHash = true } = {}) {
         if (game === currentGame) return;
         if (!GAMES.includes(game)) game = 'tetris';
 
-        // 通知旧 iframe 暂停
         GameBridge.notifyPause(frame);
 
-        // 更新按钮状态
         buttons.forEach(b => {
             const active = b.dataset.game === game;
             b.classList.toggle('active', active);
@@ -149,12 +142,8 @@
 
         showLoading();
         hideError();
-        // 用 location.replace 避免污染 session history
-        try {
-            frame.contentWindow.location.replace(`games/${game}.html`);
-        } catch (e) {
-            frame.src = `games/${game}.html`;
-        }
+        // 关键修复 5：直接用 frame.src，去掉 location.replace
+        frame.src = `games/${game}.html`;
 
         currentGame = game;
         try { localStorage.setItem(STORAGE_KEY, game); } catch (e) {}
@@ -163,7 +152,6 @@
         }
     }
 
-    // ---------- iframe 事件 ----------
     frame.addEventListener('load', () => {
         hideLoading();
         try { frame.contentWindow.focus(); } catch (e) {}
@@ -172,14 +160,12 @@
         showError('无法加载游戏页面');
     });
 
-    // ---------- 按钮点击 ----------
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
             switchGame(btn.dataset.game);
         });
     });
 
-    // ---------- hash 变化（浏览器前进/后退） ----------
     window.addEventListener('hashchange', () => {
         const hash = (location.hash || '').replace(/^#/, '');
         if (GAMES.includes(hash) && hash !== currentGame) {
@@ -187,14 +173,12 @@
         }
     });
 
-    // ---------- 页面可见性 ----------
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             GameBridge.notifyPause(frame);
         }
     });
 
-    // ---------- 重试 ----------
     btnRetry.addEventListener('click', () => {
         hideError();
         const g = currentGame;
@@ -202,7 +186,6 @@
         switchGame(g);
     });
 
-    // ---------- 启动 ----------
     const initial = pickInitialGame();
     buttons.forEach(b => {
         const active = b.dataset.game === initial;
