@@ -17,145 +17,151 @@
 .block {
     position: absolute;
     display: flex; justify-content: center; align-items: center;
-    font-weight: bold; font-size: 18px;
+    font-weight: 700; font-size: 18px;
     color: #000;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: left 0.15s, top 0.15s;
     border: 2px solid rgba(0,0,0,0.2);
     box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15);
     user-select: none;
+    font-family: "KaiTi", "STKaiti", serif;
 }
 .block.cao { background: #f87171; color: #fff; font-size: 22px; }
 .block.general { background: #fbbf24; }
 .block.soldier { background: #93c5fd; }
-.block.empty-hint { background: rgba(74,222,128,0.15); border: 2px dashed rgba(74,222,128,0.4); }
+.block.hint {
+    background: rgba(74,222,128,0.15);
+    border: 2px dashed rgba(74,222,128,0.5);
+    pointer-events: none;
+    z-index: 0;
+}
 .klotski-info { color: var(--text-sub); font-size: 14px; }
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="klotski-wrap">
-        <div class="klotski-info">目标：把「曹操」移到最下方出口</div>
-        <div id="klotskiBoard" class="klotski-board"></div>
-        <button class="action-btn" id="btnReset">重新开始</button>
+        <div class="klotski-info">目标：将「曹操」移动到最下方出口</div>
+        <div id="board" class="klotski-board"></div>
+        <button class="btn" id="btnReset">重新开始</button>
     </div>
 </div>
+
+<script src="../js/bridge.js"></script>
 <script>
-// 经典横刀立马布局，单位格子 100x100
-// 棋盘宽4格，高5格
-const CELL = 100;
-let blocks = [];
-let selectedId = null;
+(function () {
+    'use strict';
 
-const LAYOUT = [
-    { id:'cao', name:'曹操', x:1, y:0, w:2, h:2, type:'cao' },
-    { id:'zhang', name:'张飞', x:0, y:0, w:1, h:2, type:'general' },
-    { id:'zhao', name:'赵云', x:3, y:0, w:1, h:2, type:'general' },
-    { id:'ma', name:'马超', x:0, y:2, w:1, h:2, type:'general' },
-    { id:'huang', name:'黄忠', x:3, y:2, w:1, h:2, type:'general' },
-    { id:'guan', name:'关羽', x:1, y:2, w:2, h:1, type:'general' },
-    { id:'s1', name:'兵', x:0, y:4, w:1, h:1, type:'soldier' },
-    { id:'s2', name:'兵', x:1, y:3, w:1, h:1, type:'soldier' },
-    { id:'s3', name:'兵', x:2, y:3, w:1, h:1, type:'soldier' },
-    { id:'s4', name:'兵', x:3, y:4, w:1, h:1, type:'soldier' },
-];
+    const CELL = 100;
 
-function reset() {
-    blocks = JSON.parse(JSON.stringify(LAYOUT));
-    selectedId = null;
-    render();
-}
+    const LAYOUT = [
+        { id: 'cao',   name: '曹操', x: 1, y: 0, w: 2, h: 2, type: 'cao' },
+        { id: 'zhang', name: '张飞', x: 0, y: 0, w: 1, h: 2, type: 'general' },
+        { id: 'zhao',  name: '赵云', x: 3, y: 0, w: 1, h: 2, type: 'general' },
+        { id: 'ma',    name: '马超', x: 0, y: 2, w: 1, h: 2, type: 'general' },
+        { id: 'huang', name: '黄忠', x: 3, y: 2, w: 1, h: 2, type: 'general' },
+        { id: 'guan',  name: '关羽', x: 1, y: 2, w: 2, h: 1, type: 'general' },
+        { id: 's1',    name: '兵', x: 0, y: 4, w: 1, h: 1, type: 'soldier' },
+        { id: 's2',    name: '兵', x: 1, y: 3, w: 1, h: 1, type: 'soldier' },
+        { id: 's3',    name: '兵', x: 2, y: 3, w: 1, h: 1, type: 'soldier' },
+        { id: 's4',    name: '兵', x: 3, y: 4, w: 1, h: 1, type: 'soldier' }
+    ];
 
-function render() {
-    const el = document.getElementById('klotskiBoard');
-    el.innerHTML = '';
-    blocks.forEach(b => {
-        const div = document.createElement('div');
-        div.className = 'block ' + b.type;
-        div.style.left = (b.x * CELL) + 'px';
-        div.style.top = (b.y * CELL) + 'px';
-        div.style.width = (b.w * CELL - 4) + 'px';
-        div.style.height = (b.h * CELL - 4) + 'px';
-        div.innerText = b.name;
-        if (selectedId === b.id) div.style.boxShadow = '0 0 0 3px #4ade80, inset 0 -4px 0 rgba(0,0,0,0.15)';
-        div.onclick = () => onBlockClick(b);
-        el.appendChild(div);
-    });
-}
+    let blocks = [];
+    let selectedId = null;
+    const boardEl = document.getElementById('board');
 
-function onBlockClick(b) {
-    if (selectedId === b.id) { selectedId = null; render(); return; }
-    selectedId = b.id;
-    render();
-    // 显示可移动方向
-    const dirs = getValidDirs(b);
-    dirs.forEach(d => showHint(b, d));
-}
-
-function getValidDirs(b) {
-    const dirs = [];
-    const candidates = [[0,-1,'up'],[0,1,'down'],[-1,0,'left'],[1,0,'right']];
-    for (const [dx, dy, name] of candidates) {
-        if (canMove(b, dx, dy)) dirs.push({ dx, dy, name });
-    }
-    return dirs;
-}
-
-function canMove(b, dx, dy) {
-    const nx = b.x + dx, ny = b.y + dy;
-    if (nx < 0 || ny < 0 || nx + b.w > 4 || ny + b.h > 5) return false;
-    // 检查是否与其他块重叠
-    for (const other of blocks) {
-        if (other.id === b.id) continue;
-        if (nx < other.x + other.w && nx + b.w > other.x &&
-            ny < other.y + other.h && ny + b.h > other.y) return false;
-    }
-    return true;
-}
-
-function showHint(b, dir) {
-    const el = document.getElementById('klotskiBoard');
-    const hint = document.createElement('div');
-    hint.className = 'block empty-hint';
-    const nx = b.x + dir.dx, ny = b.y + dir.dy;
-    hint.style.left = (nx * CELL) + 'px';
-    hint.style.top = (ny * CELL) + 'px';
-    hint.style.width = (b.w * CELL - 4) + 'px';
-    hint.style.height = (b.h * CELL - 4) + 'px';
-    hint.style.zIndex = 0;
-    el.appendChild(hint);
-}
-
-// 用鼠标拖动或方向键移动选中的块
-document.addEventListener('keydown', e => {
-    if (!selectedId) return;
-    const b = blocks.find(x => x.id === selectedId);
-    if (!b) return;
-    let dx = 0, dy = 0;
-    if (e.key === 'ArrowUp') dy = -1;
-    else if (e.key === 'ArrowDown') dy = 1;
-    else if (e.key === 'ArrowLeft') dx = -1;
-    else if (e.key === 'ArrowRight') dx = 1;
-    else return;
-    e.preventDefault();
-    if (canMove(b, dx, dy)) {
-        b.x += dx; b.y += dy;
+    function reset() {
+        blocks = JSON.parse(JSON.stringify(LAYOUT));
         selectedId = null;
         render();
-        checkWin();
     }
-});
 
-function checkWin() {
-    const cao = blocks.find(b => b.id === 'cao');
-    if (cao.x === 1 && cao.y === 3) {
-        setTimeout(() => alert('恭喜！曹操成功逃脱！'), 100);
+    function render() {
+        boardEl.innerHTML = '';
+        for (const b of blocks) {
+            const div = document.createElement('div');
+            div.className = 'block ' + b.type;
+            div.style.left = (b.x * CELL) + 'px';
+            div.style.top = (b.y * CELL) + 'px';
+            div.style.width = (b.w * CELL - 4) + 'px';
+            div.style.height = (b.h * CELL - 4) + 'px';
+            div.textContent = b.name;
+            if (selectedId === b.id) div.style.boxShadow = '0 0 0 3px #4ade80, inset 0 -4px 0 rgba(0,0,0,0.15)';
+            div.onclick = () => selectBlock(b);
+            boardEl.appendChild(div);
+        }
+        if (selectedId) {
+            const b = blocks.find(x => x.id === selectedId);
+            if (b) {
+                for (const d of validDirs(b)) {
+                    const hint = document.createElement('div');
+                    hint.className = 'block hint';
+                    hint.style.left = ((b.x + d.dx) * CELL) + 'px';
+                    hint.style.top = ((b.y + d.dy) * CELL) + 'px';
+                    hint.style.width = (b.w * CELL - 4) + 'px';
+                    hint.style.height = (b.h * CELL - 4) + 'px';
+                    boardEl.appendChild(hint);
+                }
+            }
+        }
     }
-}
 
-document.getElementById('btnReset').onclick = reset;
-reset();
+    function selectBlock(b) {
+        if (selectedId === b.id) { selectedId = null; render(); return; }
+        selectedId = b.id;
+        render();
+    }
+
+    function validDirs(b) {
+        const dirs = [];
+        for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
+            if (canMove(b, dx, dy)) dirs.push({ dx, dy });
+        }
+        return dirs;
+    }
+
+    function canMove(b, dx, dy) {
+        const nx = b.x + dx, ny = b.y + dy;
+        if (nx < 0 || ny < 0 || nx + b.w > 4 || ny + b.h > 5) return false;
+        for (const o of blocks) {
+            if (o.id === b.id) continue;
+            if (nx < o.x + o.w && nx + b.w > o.x && ny < o.y + o.h && ny + b.h > o.y) return false;
+        }
+        return true;
+    }
+
+    document.addEventListener('keydown', e => {
+        if (!selectedId) return;
+        const b = blocks.find(x => x.id === selectedId);
+        if (!b) return;
+        let dx = 0, dy = 0;
+        if (e.key === 'ArrowUp') dy = -1;
+        else if (e.key === 'ArrowDown') dy = 1;
+        else if (e.key === 'ArrowLeft') dx = -1;
+        else if (e.key === 'ArrowRight') dx = 1;
+        else return;
+        e.preventDefault();
+        if (canMove(b, dx, dy)) {
+            b.x += dx; b.y += dy;
+            selectedId = null;
+            render();
+            checkWin();
+        }
+    });
+
+    function checkWin() {
+        const cao = blocks.find(b => b.id === 'cao');
+        if (cao.x === 1 && cao.y === 3) {
+            setTimeout(() => alert('🎉 恭喜！曹操成功逃脱！'), 100);
+        }
+    }
+
+    document.getElementById('btnReset').onclick = reset;
+    reset();
+    GameBridge.notifyReady();
+})();
 </script>
 </body>
 </html>
