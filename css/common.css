@@ -37,7 +37,6 @@ html, body {
 
 body {
     background-color: var(--bg-base);
-    /* 用 100% 而不是 100vh，避免 iOS 地址栏抖动 */
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
@@ -49,6 +48,7 @@ body {
     isolation: isolate;
 }
 
+/* 背景图用伪元素固定，iOS Safari 更稳 */
 body::before {
     content: '';
     position: fixed;
@@ -59,12 +59,17 @@ body::before {
     pointer-events: none;
 }
 
-/* iframe 内页面：去掉重复的背景和内边距 */
+/* ============================================================
+   iframe 内页面专用：去掉重复背景和内边距
+   ============================================================ */
 body.embedded {
     background: transparent;
     padding: 0;
+    height: 100vh;
+    height: 100dvh;
     min-height: 100vh;
     min-height: 100dvh;
+    overflow: hidden;
 }
 body.embedded::before { display: none; }
 
@@ -123,7 +128,9 @@ body.embedded::before { display: none; }
 .nav-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ============================================================
-   游戏容器：桌面用 clamp，手机铺满
+   游戏容器
+   桌面：固定高度 clamp
+   移动：由 media query 用 flex: 1 接管（见下面）
    ============================================================ */
 .game-content {
     background: var(--bg-glass);
@@ -134,6 +141,7 @@ body.embedded::before { display: none; }
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     position: relative;
+    height: 620px;
     height: clamp(420px, calc(100vh - 220px), 680px);
     height: clamp(420px, calc(100dvh - 220px), 680px);
     min-height: 420px;
@@ -162,6 +170,7 @@ body.embedded::before { display: none; }
     color: var(--text);
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ============================================================
@@ -291,48 +300,66 @@ body.embedded::before { display: none; }
 }
 
 /* ============================================================
-   响应式：手机 (≤ 767px) —— 铺满视口
+   响应式：手机 (≤ 767px) —— 用 flex 自动填满剩余高度
    ============================================================ */
 @media (max-width: 767px) {
+    /* body 锁死视口高度，不产生整体滚动 */
     body {
         padding: calc(8px + var(--safe-top)) 8px calc(8px + var(--safe-bottom));
-        gap: 0;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
     }
-    .container { gap: 8px; }
 
-    /* 导航：3 列小按钮，占 2-3 行，压缩到最低 */
+    /* iframe 内：body 已经默认占了 100dvh，不需要再改 */
+    body.embedded {
+        padding: 0;
+    }
+
+    /* container 占满 body 剩余高度 */
+    .container {
+        flex: 1;
+        min-height: 0;
+        gap: 8px;
+    }
+
+    /* 导航：3 列，压缩高度 */
     .game-nav {
         grid-template-columns: repeat(3, 1fr);
         padding: 6px;
         gap: 4px;
         border-radius: 10px;
+        flex-shrink: 0;
     }
     .nav-btn {
         font-size: 11px;
         padding: 6px 2px;
-        min-height: 36px;
+        min-height: 34px;
         border-radius: 6px;
         font-weight: 600;
         letter-spacing: -0.2px;
     }
 
-    /* 关键：游戏容器铺满剩余视口 */
+    /* 关键：游戏区用 flex 自动占满剩余高度，不用 calc 估算 */
     .game-content {
         border-radius: 10px;
-        height: auto;
         flex: 1;
         min-height: 0;
-        /* 减去：body padding 上下 + nav 高度 + gap */
-        /* nav 3 行 ≈ 3*36 + 2*4 + 12 = 128px，加上留白，按 160 估算 */
-        height: calc(100vh - 168px);
-        height: calc(100dvh - 168px);
+        height: auto;
     }
 
+    /* iframe 内布局：允许纵向滚动 */
     .game-inner {
         padding: 8px;
         align-items: stretch;
+        min-height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
+    /* 模态框 */
     .modal-box { padding: 24px 20px; width: 90vw; }
     .modal-box h2 { font-size: 20px; }
     .modal-box .big-value { font-size: 32px; }
@@ -345,13 +372,20 @@ body.embedded::before { display: none; }
 }
 
 /* ============================================================
-   超小屏手机 (≤ 380px，例如 iPhone SE)
+   响应式：超小屏手机 (≤ 380px)
    ============================================================ */
 @media (max-width: 380px) {
-    .nav-btn { font-size: 10px; min-height: 32px; }
-    .game-content {
-        height: calc(100vh - 152px);
-        height: calc(100dvh - 152px);
+    .nav-btn {
+        font-size: 10px;
+        min-height: 30px;
+        padding: 4px 2px;
+    }
+    .game-nav {
+        padding: 4px;
+        gap: 3px;
+    }
+    .game-inner {
+        padding: 6px;
     }
 }
 
@@ -360,9 +394,22 @@ body.embedded::before { display: none; }
    ============================================================ */
 @media (max-width: 900px) and (orientation: landscape) {
     body {
-        padding: calc(6px + var(--safe-top)) 12px calc(6px + var(--safe-bottom));
+        padding: calc(6px + var(--safe-top)) 10px calc(6px + var(--safe-bottom));
+        height: 100vh;
+        height: 100dvh;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
     }
-    .container { gap: 6px; }
+    body.embedded { padding: 0; }
+
+    .container {
+        flex: 1;
+        min-height: 0;
+        gap: 6px;
+    }
+
+    /* 横屏时导航 9 列一行 */
     .game-nav {
         grid-template-columns: repeat(9, 1fr);
         padding: 4px;
@@ -374,11 +421,19 @@ body.embedded::before { display: none; }
         padding: 3px 2px;
         border-radius: 5px;
     }
+
     .game-content {
-        height: calc(100vh - 80px);
-        height: calc(100dvh - 80px);
+        flex: 1;
+        min-height: 0;
+        height: auto;
+        border-radius: 8px;
     }
-    .game-inner { padding: 6px; }
+
+    .game-inner {
+        padding: 6px;
+        min-height: 100%;
+        overflow-y: auto;
+    }
 }
 
 /* ============================================================
