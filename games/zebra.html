@@ -29,7 +29,6 @@
     flex-shrink: 0;
 }
 .zebra-toolbar b { color: var(--primary); }
-.zebra-nav { display: flex; gap: 6px; flex-wrap: wrap; }
 .zebra-problem {
     background: rgba(0,0,0,0.3);
     padding: 12px 16px;
@@ -37,7 +36,7 @@
     font-size: 12.5px;
     line-height: 1.85;
     color: var(--text-sub);
-    max-height: 200px;
+    max-height: 240px;
     overflow-y: auto;
     flex-shrink: 0;
 }
@@ -99,12 +98,7 @@
 @media (max-width: 767px) {
     .zebra-wrap { gap: 8px; }
     .zebra-toolbar { font-size: 12px; padding: 8px 10px; }
-    .zebra-nav .btn {
-        padding: 6px 10px !important;
-        font-size: 12px !important;
-        min-height: 36px;
-    }
-    .zebra-problem { font-size: 12px; padding: 10px 12px; max-height: 160px; }
+    .zebra-problem { font-size: 12px; padding: 10px 12px; max-height: 200px; }
     .zebra-table th, .zebra-table td { font-size: 11px; padding: 4px 2px; }
     .zebra-table select { font-size: 11px; padding: 3px 1px; min-height: 32px; }
     .zebra-btns .btn { font-size: 12px; padding: 8px 12px; min-height: 40px; }
@@ -115,12 +109,7 @@
 <div class="game-inner">
     <div class="zebra-wrap">
         <div class="zebra-toolbar">
-            <div>第 <b id="idxLabel">1</b> / <b id="totalLabel">10</b> 题 · <b id="titleLabel">—</b></div>
-            <div class="zebra-nav">
-                <button class="btn ghost" id="btnPrev" style="padding:6px 12px; font-size:13px;">← 上一题</button>
-                <button class="btn ghost" id="btnNext" style="padding:6px 12px; font-size:13px;">下一题 →</button>
-                <button class="btn ghost" id="btnRandom" style="padding:6px 12px; font-size:13px;">🎲 随机</button>
-            </div>
+            <div><b id="titleLabel">爱因斯坦谜题</b></div>
         </div>
 
         <div class="zebra-problem" id="problem"></div>
@@ -132,7 +121,7 @@
         <div class="zebra-btns">
             <button class="btn" id="btnCheck">检查答案</button>
             <button class="btn ghost" id="btnHint">提示</button>
-            <button class="btn ghost" id="btnReset">重置本题</button>
+            <button class="btn ghost" id="btnReset">重置</button>
         </div>
     </div>
 </div>
@@ -146,12 +135,72 @@
 
     document.body.classList.add('embedded');
 
+    // 立刻通知父页面：已就绪
+    GameBridge.notifyReady();
+
     const MAX_HINTS = 3;
     const HOUSE_COUNT = 5;
 
     // ============================================================
-    // 辅助：位置查询 + 相邻
+    // 唯一题目：经典爱因斯坦谜题
     // ============================================================
+    const PUZZLE = {
+        title: '爱因斯坦谜题',
+        intro: '5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物各不相同。',
+        clueTexts: [
+            '英国人住在红房子里。',
+            '瑞典人养狗。',
+            '丹麦人喝茶。',
+            '绿房子在白房子的左边。',
+            '绿房子的主人喝咖啡。',
+            '抽 Pall Mall 的人养鸟。',
+            '黄房子的主人抽 Dunhill。',
+            '中间房子的主人喝牛奶。',
+            '挪威人住在第一栋房子。',
+            '抽 Blend 的人住在养猫的人旁边。',
+            '养马的人住在抽 Dunhill 的人旁边。',
+            '抽 Blue Master 的人喝啤酒。',
+            '德国人抽 Prince。',
+            '挪威人住在蓝房子旁边。',
+            '抽 Blend 的人有一个喝水的邻居。'
+        ],
+        question: '谁养鱼？',
+        categories: {
+            nationality: { label: '国籍', values: ['挪威人','丹麦人','英国人','德国人','瑞典人'] },
+            color:       { label: '颜色', values: ['黄色','蓝色','红色','绿色','白色'] },
+            drink:       { label: '饮料', values: ['水','茶','牛奶','咖啡','啤酒'] },
+            smoke:       { label: '香烟', values: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'] },
+            pet:         { label: '宠物', values: ['猫','马','鸟','鱼','狗'] }
+        },
+        // 经典答案（左到右）
+        answer: [
+            { nationality:'挪威人', color:'黄色', drink:'水',   smoke:'Dunhill',     pet:'猫' },
+            { nationality:'丹麦人', color:'蓝色', drink:'茶',   smoke:'Blend',       pet:'马' },
+            { nationality:'英国人', color:'红色', drink:'牛奶', smoke:'Pall Mall',   pet:'鸟' },
+            { nationality:'德国人', color:'绿色', drink:'咖啡', smoke:'Prince',      pet:'鱼' },
+            { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' }
+        ],
+        // 线索谓词（用于校验玩家填的格子是否满足所有线索）
+        clues: [
+            a => a[posOf(a,'nationality','英国人')] >= 0 && a[posOf(a,'nationality','英国人')].color === '红色',
+            a => a[posOf(a,'nationality','瑞典人')] >= 0 && a[posOf(a,'nationality','瑞典人')].pet === '狗',
+            a => a[posOf(a,'nationality','丹麦人')] >= 0 && a[posOf(a,'nationality','丹麦人')].drink === '茶',
+            a => posOf(a,'color','绿色') >= 0 && posOf(a,'color','白色') >= 0 && posOf(a,'color','绿色') < posOf(a,'color','白色'),
+            a => a[posOf(a,'color','绿色')] && a[posOf(a,'color','绿色')].drink === '咖啡',
+            a => a[posOf(a,'smoke','Pall Mall')] && a[posOf(a,'smoke','Pall Mall')].pet === '鸟',
+            a => a[posOf(a,'color','黄色')] && a[posOf(a,'color','黄色')].smoke === 'Dunhill',
+            a => a[2] && a[2].drink === '牛奶',
+            a => a[0] && a[0].nationality === '挪威人',
+            a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'pet','猫')),
+            a => adjacent(posOf(a,'pet','马'), posOf(a,'smoke','Dunhill')),
+            a => a[posOf(a,'smoke','Blue Master')] && a[posOf(a,'smoke','Blue Master')].drink === '啤酒',
+            a => a[posOf(a,'nationality','德国人')] && a[posOf(a,'nationality','德国人')].smoke === 'Prince',
+            a => adjacent(posOf(a,'nationality','挪威人'), posOf(a,'color','蓝色')),
+            a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'drink','水'))
+        ],
+        target: { house: 3, key: 'nationality', value: '德国人' }
+    };
+
     function posOf(assign, key, value) {
         for (let i = 0; i < assign.length; i++) {
             if (assign[i][key] === value) return i;
@@ -163,449 +212,15 @@
     }
 
     // ============================================================
-    // 题库：10 道逻辑谜题
-    // 所有 answer 由求解器算出，不写死
-    // ============================================================
-    const PUZZLES = [
-        {
-            title: '爱因斯坦谜题',
-            intro: '5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物各不相同。',
-            clueTexts: [
-                '英国人住在红房子里。',
-                '瑞典人养狗。',
-                '丹麦人喝茶。',
-                '绿房子在白房子的左边。',
-                '绿房子的主人喝咖啡。',
-                '抽 Pall Mall 的人养鸟。',
-                '黄房子的主人抽 Dunhill。',
-                '中间房子的主人喝牛奶。',
-                '挪威人住在第一栋房子。',
-                '抽 Blend 的人住在养猫的人旁边。',
-                '养马的人住在抽 Dunhill 的人旁边。',
-                '抽 Blue Master 的人喝啤酒。',
-                '德国人抽 Prince。',
-                '挪威人住在蓝房子旁边。',
-                '抽 Blend 的人有一个喝水的邻居。'
-            ],
-            question: '谁养鱼？',
-            categories: {
-                nationality: { label: '国籍', values: ['挪威人','丹麦人','英国人','德国人','瑞典人'] },
-                color:       { label: '颜色', values: ['黄色','蓝色','红色','绿色','白色'] },
-                drink:       { label: '饮料', values: ['水','茶','牛奶','咖啡','啤酒'] },
-                smoke:       { label: '香烟', values: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'] },
-                pet:         { label: '宠物', values: ['猫','马','鸟','鱼','狗'] }
-            },
-            clues: [
-                a => a[posOf(a,'nationality','英国人')] >= 0 && a[posOf(a,'nationality','英国人')].color === '红色',
-                a => a[posOf(a,'nationality','瑞典人')] >= 0 && a[posOf(a,'nationality','瑞典人')].pet === '狗',
-                a => a[posOf(a,'nationality','丹麦人')] >= 0 && a[posOf(a,'nationality','丹麦人')].drink === '茶',
-                a => posOf(a,'color','绿色') >= 0 && posOf(a,'color','白色') >= 0 && posOf(a,'color','绿色') < posOf(a,'color','白色'),
-                a => a[posOf(a,'color','绿色')] && a[posOf(a,'color','绿色')].drink === '咖啡',
-                a => a[posOf(a,'smoke','Pall Mall')] && a[posOf(a,'smoke','Pall Mall')].pet === '鸟',
-                a => a[posOf(a,'color','黄色')] && a[posOf(a,'color','黄色')].smoke === 'Dunhill',
-                a => a[2] && a[2].drink === '牛奶',
-                a => a[0] && a[0].nationality === '挪威人',
-                a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'pet','猫')),
-                a => adjacent(posOf(a,'pet','马'), posOf(a,'smoke','Dunhill')),
-                a => a[posOf(a,'smoke','Blue Master')] && a[posOf(a,'smoke','Blue Master')].drink === '啤酒',
-                a => a[posOf(a,'nationality','德国人')] && a[posOf(a,'nationality','德国人')].smoke === 'Prince',
-                a => adjacent(posOf(a,'nationality','挪威人'), posOf(a,'color','蓝色')),
-                a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'drink','水'))
-            ],
-            target: { house: 3, key: 'nationality', value: '德国人' }
-        },
-        {
-            title: '足球迷',
-            intro: '5 位朋友排成一排住在不同城市，各自支持不同球队、喝不同饮料、养不同宠物。',
-            clueTexts: [
-                '北京人支持国安。',
-                '上海人喝咖啡。',
-                '广州人养猫。',
-                '深圳人支持恒大。',
-                '中间位置的人喝牛奶。',
-                '支持上港的人住在支持鲁能的人旁边。',
-                '成都人住在第一栋房子。',
-                '喝啤酒的人支持苏宁。',
-                '养狗的人住在喝牛奶的人旁边。',
-                '支持鲁能的人喝矿泉水。'
-            ],
-            question: '谁养鱼？',
-            categories: {
-                city:  { label: '城市', values: ['北京人','上海人','广州人','深圳人','成都人'] },
-                drink: { label: '饮料', values: ['水','咖啡','牛奶','啤酒','矿泉水'] },
-                team:  { label: '球队', values: ['国安','上港','鲁能','恒大','苏宁'] },
-                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','仓鼠'] }
-            },
-            clues: [
-                a => a[posOf(a,'city','北京人')] >= 0 && a[posOf(a,'city','北京人')].team === '国安',
-                a => a[posOf(a,'city','上海人')] >= 0 && a[posOf(a,'city','上海人')].drink === '咖啡',
-                a => a[posOf(a,'city','广州人')] >= 0 && a[posOf(a,'city','广州人')].pet === '猫',
-                a => a[posOf(a,'city','深圳人')] >= 0 && a[posOf(a,'city','深圳人')].team === '恒大',
-                a => a[2] && a[2].drink === '牛奶',
-                a => adjacent(posOf(a,'team','上港'), posOf(a,'team','鲁能')),
-                a => a[0] && a[0].city === '成都人',
-                a => a[posOf(a,'drink','啤酒')] && a[posOf(a,'drink','啤酒')].team === '苏宁',
-                a => adjacent(posOf(a,'pet','狗'), posOf(a,'drink','牛奶')),
-                a => a[posOf(a,'team','鲁能')] && a[posOf(a,'team','鲁能')].drink === '矿泉水'
-            ],
-            target: { house: -1, key: 'pet', value: '鱼' }
-        },
-        {
-            title: '五色水果',
-            intro: '5 栋颜色不同的房子，每栋主人喜欢不同水果、饮料和乐器。',
-            clueTexts: [
-                '红房子的主人爱吃苹果。',
-                '蓝房子的主人喝咖啡。',
-                '绿房子的主人弹钢琴。',
-                '黄房子的主人喝牛奶。',
-                '中间房子的人喝矿泉水。',
-                '白房子的主人住在绿房子的右边。',
-                '弹吉他的主人住在爱吃香蕉的主人旁边。',
-                '喝橙汁的人弹小提琴。',
-                '喝牛奶的人住在弹吉他的主人旁边。',
-                '蓝房子的主人住在第一栋房子。'
-            ],
-            question: '谁爱吃香蕉？',
-            categories: {
-                color:  { label: '颜色', values: ['红色','蓝色','绿色','黄色','白色'] },
-                fruit:  { label: '水果', values: ['苹果','香蕉','橘子','葡萄','西瓜'] },
-                drink:  { label: '饮料', values: ['咖啡','牛奶','矿泉水','橙汁','茶'] },
-                music:  { label: '乐器', values: ['钢琴','吉他','小提琴','笛子','鼓'] }
-            },
-            clues: [
-                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].fruit === '苹果',
-                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].drink === '咖啡',
-                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].music === '钢琴',
-                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].drink === '牛奶',
-                a => a[2] && a[2].drink === '矿泉水',
-                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
-                a => adjacent(posOf(a,'music','吉他'), posOf(a,'fruit','香蕉')),
-                a => a[posOf(a,'drink','橙汁')] && a[posOf(a,'drink','橙汁')].music === '小提琴',
-                a => adjacent(posOf(a,'drink','牛奶'), posOf(a,'music','吉他')),
-                a => a[0] && a[0].color === '蓝色'
-            ],
-            target: { house: -1, key: 'fruit', value: '香蕉' }
-        },
-        {
-            title: '五位职业',
-            intro: '5 个人从事不同职业，住不同楼层，养不同宠物，喝不同饮料。',
-            clueTexts: [
-                '医生住在最高层。',
-                '律师养狗。',
-                '教师喝咖啡。',
-                '工程师住在律师的楼上。',
-                '养猫的人喝牛奶。',
-                '程序员的宠物是仓鼠。',
-                '喝啤酒的人住在第一层。',
-                '喝矿泉水的人住在律师的楼上。',
-                '喜欢游泳的人住在养狗的人楼上。',
-                '教师住在养鸟的人旁边。'
-            ],
-            question: '谁住在第 3 层？',
-            categories: {
-                job:   { label: '职业', values: ['医生','律师','教师','工程师','程序员'] },
-                floor: { label: '楼层', values: ['1层','2层','3层','4层','5层'] },
-                pet:   { label: '宠物', values: ['狗','猫','鸟','仓鼠','兔子'] },
-                drink: { label: '饮料', values: ['咖啡','牛奶','啤酒','矿泉水','茶'] }
-            },
-            clues: [
-                a => a[posOf(a,'job','医生')] === 4,
-                a => a[posOf(a,'job','律师')] && a[posOf(a,'job','律师')].pet === '狗',
-                a => a[posOf(a,'job','教师')] && a[posOf(a,'job','教师')].drink === '咖啡',
-                a => posOf(a,'job','工程师') > posOf(a,'job','律师'),
-                a => a[posOf(a,'pet','猫')] && a[posOf(a,'pet','猫')].drink === '牛奶',
-                a => a[posOf(a,'job','程序员')] && a[posOf(a,'job','程序员')].pet === '仓鼠',
-                a => a[0] && a[0].drink === '啤酒',
-                a => posOf(a,'drink','矿泉水') > posOf(a,'job','律师'),
-                a => posOf(a,'pet','狗') >= 0 && posOf(a,'pet','狗') < 4,
-                a => adjacent(posOf(a,'job','教师'), posOf(a,'pet','鸟'))
-            ],
-            target: { house: 2, key: 'job', value: '律师' }
-        },
-        {
-            title: '五国咖啡',
-            intro: '5 位来自不同国家的人，各自喝不同咖啡、听不同音乐、养不同宠物、住不同颜色的房子。',
-            clueTexts: [
-                '意大利人喝浓缩咖啡。',
-                '美国人听爵士乐。',
-                '法国人养狗。',
-                '德国人喝拿铁。',
-                '红房子的主人听古典乐。',
-                '日本人住在第一栋房子。',
-                '喝美式咖啡的人住在蓝房子里。',
-                '听摇滚乐的人养猫。',
-                '中间房子的人喝卡布奇诺。',
-                '绿房子的主人住在白房子的左边。'
-            ],
-            question: '谁养鱼？',
-            categories: {
-                nationality: { label: '国籍', values: ['意大利人','美国人','法国人','德国人','日本人'] },
-                coffee:      { label: '咖啡', values: ['浓缩','拿铁','美式','卡布奇诺','摩卡'] },
-                music:       { label: '音乐', values: ['爵士','古典','摇滚','流行','民谣'] },
-                pet:         { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] },
-                color:       { label: '房子', values: ['红色','蓝色','绿色','白色','黄色'] }
-            },
-            clues: [
-                a => a[posOf(a,'nationality','意大利人')] >= 0 && a[posOf(a,'nationality','意大利人')].coffee === '浓缩',
-                a => a[posOf(a,'nationality','美国人')] >= 0 && a[posOf(a,'nationality','美国人')].music === '爵士',
-                a => a[posOf(a,'nationality','法国人')] >= 0 && a[posOf(a,'nationality','法国人')].pet === '狗',
-                a => a[posOf(a,'nationality','德国人')] >= 0 && a[posOf(a,'nationality','德国人')].coffee === '拿铁',
-                a => a[posOf(a,'color','红色')] && a[posOf(a,'color','红色')].music === '古典',
-                a => a[0] && a[0].nationality === '日本人',
-                a => a[posOf(a,'coffee','美式')] && a[posOf(a,'coffee','美式')].color === '蓝色',
-                a => a[posOf(a,'music','摇滚')] && a[posOf(a,'music','摇滚')].pet === '猫',
-                a => a[2] && a[2].coffee === '卡布奇诺',
-                a => posOf(a,'color','绿色') >= 0 && posOf(a,'color','白色') >= 0 && posOf(a,'color','绿色') < posOf(a,'color','白色')
-            ],
-            target: { house: -1, key: 'pet', value: '鱼' }
-        },
-        {
-            title: '五位棋手',
-            intro: '5 位棋手坐在不同位置，各自擅长不同棋类、喝不同茶、养不同宠物、穿不同颜色衣服。',
-            clueTexts: [
-                '穿红衣服的人擅长象棋。',
-                '穿蓝衣服的人喝绿茶。',
-                '穿绿衣服的人擅长围棋。',
-                '中间位置的人喝红茶。',
-                '穿黄衣服的人擅长五子棋。',
-                '穿白衣服的人坐在穿绿衣服的人的右边。',
-                '养狗的人擅长国际象棋。',
-                '喝花茶的人养猫。',
-                '养鸟的人坐在养猫的人的左边。',
-                '喝乌龙茶的人坐在第一位置。'
-            ],
-            question: '谁擅长围棋？',
-            categories: {
-                color: { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
-                game:  { label: '棋类', values: ['象棋','围棋','五子棋','国际象棋','军棋'] },
-                tea:   { label: '茶',   values: ['绿茶','红茶','花茶','乌龙茶','普洱茶'] },
-                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','仓鼠'] }
-            },
-            clues: [
-                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].game === '象棋',
-                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].tea === '绿茶',
-                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].game === '围棋',
-                a => a[2] && a[2].tea === '红茶',
-                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].game === '五子棋',
-                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
-                a => a[posOf(a,'pet','狗')] && a[posOf(a,'pet','狗')].game === '国际象棋',
-                a => a[posOf(a,'tea','花茶')] && a[posOf(a,'tea','花茶')].pet === '猫',
-                a => posOf(a,'pet','鸟') >= 0 && posOf(a,'pet','猫') >= 0 && posOf(a,'pet','鸟') < posOf(a,'pet','猫'),
-                a => a[0] && a[0].tea === '乌龙茶'
-            ],
-            target: { house: -1, key: 'color', value: '绿色' }
-        },
-        {
-            title: '五个学生',
-            intro: '5 位学生坐在一排，各自来自不同城市、擅长不同科目、喜欢不同科目、养不同宠物。',
-            clueTexts: [
-                '北京学生擅长数学。',
-                '上海学生喜欢物理。',
-                '广州学生养猫。',
-                '深圳学生擅长英语。',
-                '中间位置的学生喜欢化学。',
-                '成都学生坐在第一位置。',
-                '养狗的学生擅长语文。',
-                '喜欢生物的学生养鸟。',
-                '擅长数学的学生坐在养狗的学生旁边。',
-                '喜欢物理的学生住在成都学生旁边。'
-            ],
-            question: '谁养鱼？',
-            categories: {
-                city:  { label: '城市', values: ['北京','上海','广州','深圳','成都'] },
-                skill: { label: '擅长', values: ['数学','英语','语文','物理','化学'] },
-                like:  { label: '喜欢', values: ['物理','化学','生物','地理','历史'] },
-                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','兔子'] }
-            },
-            clues: [
-                a => a[posOf(a,'city','北京')] >= 0 && a[posOf(a,'city','北京')].skill === '数学',
-                a => a[posOf(a,'city','上海')] >= 0 && a[posOf(a,'city','上海')].like === '物理',
-                a => a[posOf(a,'city','广州')] >= 0 && a[posOf(a,'city','广州')].pet === '猫',
-                a => a[posOf(a,'city','深圳')] >= 0 && a[posOf(a,'city','深圳')].skill === '英语',
-                a => a[2] && a[2].like === '化学',
-                a => a[0] && a[0].city === '成都',
-                a => a[posOf(a,'pet','狗')] && a[posOf(a,'pet','狗')].skill === '语文',
-                a => a[posOf(a,'like','生物')] && a[posOf(a,'like','生物')].pet === '鸟',
-                a => adjacent(posOf(a,'skill','数学'), posOf(a,'pet','狗')),
-                a => adjacent(posOf(a,'like','物理'), posOf(a,'city','成都'))
-            ],
-            target: { house: -1, key: 'pet', value: '鱼' }
-        },
-        {
-            title: '五个花园',
-            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水。',
-            clueTexts: [
-                '红色围栏的花园种玫瑰。',
-                '蓝色围栏的花园种郁金香。',
-                '绿色围栏的花园种百合。',
-                '中间花园种向日葵。',
-                '黄色围栏的花园种雏菊。',
-                '白色围栏的花园在绿色围栏的右边。',
-                '早上浇水的人在种向日葵的花园。',
-                '养蜜蜂的花园种玫瑰。',
-                '养蝴蝶的花园在养蜜蜂的花园旁边。',
-                '种郁金香的花园在中午浇水。'
-            ],
-            question: '谁种百合？',
-            categories: {
-                fence: { label: '围栏', values: ['红色','蓝色','绿色','黄色','白色'] },
-                flower:{ label: '花',   values: ['玫瑰','郁金香','百合','向日葵','雏菊'] },
-                time:  { label: '浇水', values: ['早上','中午','下午','傍晚','晚上'] },
-                pet:   { label: '昆虫', values: ['蜜蜂','蝴蝶','瓢虫','萤火虫','蚂蚁'] }
-            },
-            clues: [
-                a => a[posOf(a,'fence','红色')] >= 0 && a[posOf(a,'fence','红色')].flower === '玫瑰',
-                a => a[posOf(a,'fence','蓝色')] >= 0 && a[posOf(a,'fence','蓝色')].flower === '郁金香',
-                a => a[posOf(a,'fence','绿色')] >= 0 && a[posOf(a,'fence','绿色')].flower === '百合',
-                a => a[2] && a[2].flower === '向日葵',
-                a => a[posOf(a,'fence','黄色')] >= 0 && a[posOf(a,'fence','黄色')].flower === '雏菊',
-                a => posOf(a,'fence','白色') > posOf(a,'fence','绿色'),
-                a => a[posOf(a,'time','早上')] && a[posOf(a,'time','早上')].flower === '向日葵',
-                a => a[posOf(a,'pet','蜜蜂')] && a[posOf(a,'pet','蜜蜂')].flower === '玫瑰',
-                a => adjacent(posOf(a,'pet','蝴蝶'), posOf(a,'pet','蜜蜂')),
-                a => a[posOf(a,'flower','郁金香')] && a[posOf(a,'flower','郁金香')].time === '中午'
-            ],
-            target: { house: -1, key: 'fence', value: '绿色' }
-        },
-        {
-            title: '五辆汽车',
-            intro: '5 位车主，各自开不同品牌、不同颜色、不同能源、不同座位数的车，养不同宠物。',
-            clueTexts: [
-                '开奔驰的人开红色车。',
-                '开宝马的人开黑色车。',
-                '开奥迪的人开白色车。',
-                '开特斯拉的人开电动车。',
-                '中间位置的人开 5 座车。',
-                '开丰田的人开蓝色车。',
-                '开混合动力车的人养狗。',
-                '开 7 座车的人养猫。',
-                '养鸟的人开 2 座车。',
-                '开奔驰的人住在开特斯拉的人旁边。'
-            ],
-            question: '谁养鱼？',
-            categories: {
-                brand: { label: '品牌', values: ['奔驰','宝马','奥迪','特斯拉','丰田'] },
-                color: { label: '颜色', values: ['红色','黑色','白色','蓝色','银色'] },
-                fuel:  { label: '能源', values: ['汽油','柴油','电动','混合','氢能'] },
-                seat:  { label: '座位', values: ['2座','4座','5座','7座','9座'] },
-                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] }
-            },
-            clues: [
-                a => a[posOf(a,'brand','奔驰')] >= 0 && a[posOf(a,'brand','奔驰')].color === '红色',
-                a => a[posOf(a,'brand','宝马')] >= 0 && a[posOf(a,'brand','宝马')].color === '黑色',
-                a => a[posOf(a,'brand','奥迪')] >= 0 && a[posOf(a,'brand','奥迪')].color === '白色',
-                a => a[posOf(a,'brand','特斯拉')] >= 0 && a[posOf(a,'brand','特斯拉')].fuel === '电动',
-                a => a[2] && a[2].seat === '5座',
-                a => a[posOf(a,'brand','丰田')] >= 0 && a[posOf(a,'brand','丰田')].color === '蓝色',
-                a => a[posOf(a,'fuel','混合')] && a[posOf(a,'fuel','混合')].pet === '狗',
-                a => a[posOf(a,'seat','7座')] && a[posOf(a,'seat','7座')].pet === '猫',
-                a => a[posOf(a,'pet','鸟')] && a[posOf(a,'pet','鸟')].seat === '2座',
-                a => adjacent(posOf(a,'brand','奔驰'), posOf(a,'brand','特斯拉'))
-            ],
-            target: { house: -1, key: 'pet', value: '鱼' }
-        },
-        {
-            title: '五杯咖啡',
-            intro: '5 个人在咖啡馆点了不同咖啡、加了不同配料、坐在不同位置、看不同书、穿不同颜色衣服。',
-            clueTexts: [
-                '穿红衣服的人点浓缩咖啡。',
-                '穿蓝衣服的人加牛奶。',
-                '穿绿衣服的人看小说。',
-                '中间位置的人点卡布奇诺。',
-                '穿黄衣服的人点美式。',
-                '穿白衣服的人坐在穿绿衣服的右边。',
-                '看杂志的人加糖。',
-                '看报纸的人点摩卡。',
-                '加奶泡的人坐在加糖的人旁边。',
-                '喝拿铁的人坐在第一位。'
-            ],
-            question: '谁看诗集？',
-            categories: {
-                color:  { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
-                coffee: { label: '咖啡', values: ['浓缩','拿铁','卡布奇诺','美式','摩卡'] },
-                extra:  { label: '配料', values: ['牛奶','糖','奶泡','肉桂','可可'] },
-                book:   { label: '书籍', values: ['小说','杂志','报纸','诗集','漫画'] }
-            },
-            clues: [
-                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].coffee === '浓缩',
-                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].extra === '牛奶',
-                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].book === '小说',
-                a => a[2] && a[2].coffee === '卡布奇诺',
-                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].coffee === '美式',
-                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
-                a => a[posOf(a,'book','杂志')] && a[posOf(a,'book','杂志')].extra === '糖',
-                a => a[posOf(a,'book','报纸')] && a[posOf(a,'book','报纸')].coffee === '摩卡',
-                a => adjacent(posOf(a,'extra','奶泡'), posOf(a,'extra','糖')),
-                a => a[0] && a[0].coffee === '拿铁'
-            ],
-            target: { house: -1, key: 'book', value: '诗集' }
-        }
-    ];
-
-    // ============================================================
-    // 求解器：回溯 + 剪枝
-    // 返回 { solutions, count }
-    // ============================================================
-    function solve(categories, clues, houseCount) {
-        houseCount = houseCount || HOUSE_COUNT;
-        const keys = Object.keys(categories);
-        const solutions = [];
-        const MAX_SOLUTIONS = 500;
-
-        // assignment[houseIdx][key] = value
-        const assignment = Array.from({ length: houseCount }, () => ({}));
-
-        // 为每列生成 value 的所有排列，逐列递归
-        function permuteKey(keyIdx) {
-            if (solutions.length > MAX_SOLUTIONS) return;
-            if (keyIdx === keys.length) {
-                if (clues.every(c => {
-                    try { return c(assignment); } catch (e) { return false; }
-                })) {
-                    solutions.push(assignment.map(h => ({ ...h })));
-                }
-                return;
-            }
-            const key = keys[keyIdx];
-            const values = categories[key].values.slice();
-            permuteValues(key, values, 0, () => permuteKey(keyIdx + 1));
-        }
-
-        function permuteValues(key, values, idx, onDone) {
-            if (solutions.length > MAX_SOLUTIONS) return;
-            if (idx === values.length) {
-                // 剪枝：检查目前已填的列是否能通过所有"只涉及已填列"的线索
-                // 简化：不剪枝，直接递归
-                onDone();
-                return;
-            }
-            for (let i = idx; i < values.length; i++) {
-                [values[idx], values[i]] = [values[i], values[idx]];
-                assignment[idx][key] = values[idx];
-                permuteValues(key, values, idx + 1, onDone);
-                [values[idx], values[i]] = [values[i], values[idx]];
-            }
-        }
-
-        permuteKey(0);
-        return { solutions, count: solutions.length };
-    }
-
-    // ============================================================
     // 状态
     // ============================================================
-    let currentIndex = 0;
     let state = [];
     let revealed = [];
     let hintCount = 0;
-    let currentAnswer = null;
     let locked = false;
 
     const problemEl = document.getElementById('problem');
     const wrap = document.getElementById('tableWrap');
-    const idxLabel = document.getElementById('idxLabel');
-    const totalLabel = document.getElementById('totalLabel');
-    const titleLabel = document.getElementById('titleLabel');
     const toastContainer = document.getElementById('toastContainer');
     const btnHint = document.getElementById('btnHint');
 
@@ -621,59 +236,20 @@
         }, 2200);
     }
 
-    const current = () => PUZZLES[currentIndex];
-
     // ============================================================
-    // 加载题目
+    // 渲染
     // ============================================================
-    function loadPuzzle(index) {
-        currentIndex = ((index % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
-        const p = current();
-
-        state = Array.from({ length: HOUSE_COUNT }, () => {
-            const obj = {};
-            for (const k of Object.keys(p.categories)) obj[k] = '';
-            return obj;
-        });
-        revealed = Array.from({ length: HOUSE_COUNT }, () => ({}));
-        hintCount = 0;
-        locked = false;
-        btnHint.disabled = false;
-
-        idxLabel.textContent = currentIndex + 1;
-        totalLabel.textContent = PUZZLES.length;
-        titleLabel.textContent = p.title;
-
-        // 求唯一解
-        currentAnswer = null;
-        const t0 = performance.now();
-        const res = solve(p.categories, p.clues, HOUSE_COUNT);
-        const dt = (performance.now() - t0).toFixed(0);
-        if (res.count === 1) {
-            currentAnswer = res.solutions[0];
-            console.log(`[zebra] 题「${p.title}」求解成功，耗时 ${dt}ms`);
-        } else {
-            console.warn(`[zebra] 题「${p.title}」解的数量 = ${res.count > 500 ? '>500' : res.count}（应为 1）`);
-        }
-
-        renderProblem();
-        renderTable();
-    }
-
     function renderProblem() {
-        const p = current();
-        let html = `<b>题目：</b>${p.intro}<br><b>线索：</b><br>`;
-        p.clueTexts.forEach((c, i) => { html += `${i + 1}. ${c}<br>`; });
-        html += `<span class="q">问题：${p.question}</span>`;
+        let html = `<b>题目：</b>${PUZZLE.intro}<br><b>线索：</b><br>`;
+        PUZZLE.clueTexts.forEach((c, i) => { html += `${i + 1}. ${c}<br>`; });
+        html += `<span class="q">问题：${PUZZLE.question}</span>`;
         problemEl.innerHTML = html;
     }
 
     function renderTable() {
-        const p = current();
-        const cats = Object.keys(p.categories);
-
+        const cats = Object.keys(PUZZLE.categories);
         let html = '<table class="zebra-table"><thead><tr><th style="width:70px;">房子</th>';
-        for (const k of cats) html += `<th>${p.categories[k].label}</th>`;
+        for (const k of cats) html += `<th>${PUZZLE.categories[k].label}</th>`;
         html += '</tr></thead><tbody>';
 
         for (let i = 0; i < HOUSE_COUNT; i++) {
@@ -683,7 +259,7 @@
                 html += `<td class="${isLocked ? 'correct' : ''}">`;
                 html += `<select data-house="${i}" data-cat="${k}" ${isLocked ? 'disabled' : ''}>`;
                 html += `<option value="">--</option>`;
-                for (const opt of p.categories[k].values) {
+                for (const opt of PUZZLE.categories[k].values) {
                     const sel = state[i][k] === opt ? ' selected' : '';
                     html += `<option value="${opt}"${sel}>${opt}</option>`;
                 }
@@ -696,7 +272,10 @@
 
         wrap.querySelectorAll('select').forEach(sel => {
             sel.onchange = () => {
-                if (locked) { sel.value = state[+sel.dataset.house][sel.dataset.cat]; return; }
+                if (locked) {
+                    sel.value = state[+sel.dataset.house][sel.dataset.cat];
+                    return;
+                }
                 const h = parseInt(sel.dataset.house, 10);
                 const c = sel.dataset.cat;
                 state[h][c] = sel.value;
@@ -710,23 +289,25 @@
     // ============================================================
     function check() {
         if (locked) { toast('已完成，无需再检查', 'warn'); return; }
-        const p = current();
-        const cats = Object.keys(p.categories);
+        const cats = Object.keys(PUZZLE.categories);
 
+        // 1. 是否填满
         for (let i = 0; i < HOUSE_COUNT; i++) {
             for (const k of cats) {
                 if (!state[i][k]) { toast('还有格子未填写', 'warn'); return; }
             }
         }
+        // 2. 每列不重复
         for (const k of cats) {
             const vals = state.map(s => s[k]);
             if (new Set(vals).size !== HOUSE_COUNT) {
-                toast(`「${p.categories[k].label}」列有重复`, 'warn');
+                toast(`「${PUZZLE.categories[k].label}」列有重复`, 'warn');
                 return;
             }
         }
+        // 3. 校验所有线索
         const failed = [];
-        p.clues.forEach((fn, i) => {
+        PUZZLE.clues.forEach((fn, i) => {
             try { if (!fn(state)) failed.push(i + 1); }
             catch (e) { failed.push(i + 1); }
         });
@@ -734,17 +315,10 @@
             toast(`违反线索：第 ${failed.join('、')} 条`, 'error');
             return;
         }
-        // 通关
+        // 4. 通关
         locked = true;
-        const t = p.target;
-        let answerText = '';
-        if (t.house >= 0) {
-            answerText = `${p.categories[t.key].label}为「${t.value}」的是第 ${t.house + 1} 栋。`;
-        } else {
-            const idx = currentAnswer ? currentAnswer.findIndex(h => h[t.key] === t.value) : -1;
-            answerText = `${t.value}的是第 ${idx + 1} 栋。`;
-        }
-        toast(`🎉 完全正确！${answerText}`, 'success');
+        const t = PUZZLE.target;
+        toast(`🎉 完全正确！养鱼的是${t.value}（第 ${t.house + 1} 栋）。`, 'success');
     }
 
     // ============================================================
@@ -757,16 +331,11 @@
             btnHint.disabled = true;
             return;
         }
-        if (!currentAnswer) {
-            toast('本题无唯一解，无法提示', 'warn');
-            return;
-        }
-        const p = current();
-        const cats = Object.keys(p.categories);
+        const cats = Object.keys(PUZZLE.categories);
         const wrongSlots = [];
         for (let i = 0; i < HOUSE_COUNT; i++) {
             for (const k of cats) {
-                if (state[i][k] !== currentAnswer[i][k]) wrongSlots.push({ house: i, cat: k });
+                if (state[i][k] !== PUZZLE.answer[i][k]) wrongSlots.push({ house: i, cat: k });
             }
         }
         if (wrongSlots.length === 0) {
@@ -774,12 +343,28 @@
             return;
         }
         const slot = wrongSlots[Math.floor(Math.random() * wrongSlots.length)];
-        state[slot.house][slot.cat] = currentAnswer[slot.house][slot.cat];
+        state[slot.house][slot.cat] = PUZZLE.answer[slot.house][slot.cat];
         revealed[slot.house][slot.cat] = true;
         hintCount++;
-        toast(`💡 已揭示：第 ${slot.house + 1} 栋的「${p.categories[slot.cat].label}」（剩余 ${MAX_HINTS - hintCount} 次）`, 'success');
+        toast(`💡 已揭示：第 ${slot.house + 1} 栋的「${PUZZLE.categories[slot.cat].label}」（剩余 ${MAX_HINTS - hintCount} 次）`, 'success');
         renderTable();
         if (hintCount >= MAX_HINTS) btnHint.disabled = true;
+    }
+
+    // ============================================================
+    // 重置
+    // ============================================================
+    function reset() {
+        state = Array.from({ length: HOUSE_COUNT }, () => {
+            const obj = {};
+            for (const k of Object.keys(PUZZLE.categories)) obj[k] = '';
+            return obj;
+        });
+        revealed = Array.from({ length: HOUSE_COUNT }, () => ({}));
+        hintCount = 0;
+        locked = false;
+        btnHint.disabled = false;
+        renderTable();
     }
 
     // ============================================================
@@ -787,41 +372,13 @@
     // ============================================================
     document.getElementById('btnCheck').onclick = check;
     btnHint.onclick = hint;
-    document.getElementById('btnReset').onclick = () => loadPuzzle(currentIndex);
-    document.getElementById('btnPrev').onclick = () => loadPuzzle(currentIndex - 1);
-    document.getElementById('btnNext').onclick = () => loadPuzzle(currentIndex + 1);
-    document.getElementById('btnRandom').onclick = () => {
-        if (PUZZLES.length <= 1) return;
-        let next;
-        do { next = Math.floor(Math.random() * PUZZLES.length); }
-        while (next === currentIndex);
-        loadPuzzle(next);
-    };
-
-    // 方向键切题：焦点在 select 上时忽略
-    document.addEventListener('keydown', e => {
-        const tag = (e.target.tagName || '').toLowerCase();
-        if (tag === 'select' || tag === 'input') return;
-        if (e.key === 'ArrowLeft') loadPuzzle(currentIndex - 1);
-        else if (e.key === 'ArrowRight') loadPuzzle(currentIndex + 1);
-    });
+    document.getElementById('btnReset').onclick = reset;
 
     // ============================================================
-    // 启动 + 自检
+    // 启动
     // ============================================================
-    (function selfTest() {
-        console.log('[zebra] 启动自检开始…');
-        PUZZLES.forEach((p, i) => {
-            const res = solve(p.categories, p.clues, HOUSE_COUNT);
-            if (res.count !== 1) {
-                console.warn(`[zebra] 题「${p.title}」解的数量 = ${res.count > 500 ? '>500' : res.count}（应为 1）`);
-            }
-        });
-        console.log('[zebra] 启动自检结束');
-    })();
-
-    loadPuzzle(0);
-    GameBridge.notifyReady();
+    renderProblem();
+    reset();
 })();
 </script>
 </body>
