@@ -58,7 +58,7 @@
                 <select id="aiDepth">
                     <option value="1">简单</option>
                     <option value="2" selected>普通</option>
-                    <option value="3">困难</option>
+                    <option value="3">困难（思考稍慢）</option>
                 </select>
             </div>
             <button class="btn" id="btnNew">新对局</button>
@@ -76,7 +76,6 @@
 (function () {
     'use strict';
 
-    // 棋盘：大写红方，小写黑方
     const INIT = [
         ['r','n','b','a','k','a','b','n','r'],
         [0,0,0,0,0,0,0,0,0],
@@ -97,7 +96,7 @@
 
     const VALUES = { k: 10000, r: 900, n: 400, c: 450, a: 200, b: 200, p: 100 };
 
-    let board, playerSide, turn, selected, validMoves, gameOver;
+    let board, playerSide, turn, selected, validMoves, gameOver, aiThinking;
 
     const boardEl = document.getElementById('board');
     const turnLabel = document.getElementById('turnLabel');
@@ -125,10 +124,11 @@
                 boardEl.appendChild(cell);
             }
         }
-        turnLabel.textContent = turn === 'red' ? '红方' : '黑方';
+        if (!aiThinking) {
+            turnLabel.textContent = turn === 'red' ? '红方' : '黑方';
+        }
     }
 
-    // ---------- 走子规则 ----------
     function getMoves(x, y) {
         const p = board[y][x];
         if (!p) return [];
@@ -136,18 +136,18 @@
         const red = isRed(p);
         const kind = p.toLowerCase();
 
-        function tryAdd(nx, ny, stopOnCapture) {
+        function tryAdd(nx, ny) {
             if (nx < 0 || nx > 8 || ny < 0 || ny > 9) return false;
             const t = board[ny][nx];
             if (t && sameSide(p, t)) return false;
             moves.push({ x: nx, y: ny });
-            return !t || !stopOnCapture;
+            return !t;
         }
 
         if (kind === 'r') {
             for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
                 let nx = x + dx, ny = y + dy;
-                while (tryAdd(nx, ny, true)) { nx += dx; ny += dy; }
+                while (tryAdd(nx, ny)) { nx += dx; ny += dy; }
             }
         } else if (kind === 'c') {
             for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
@@ -220,16 +220,15 @@
         return moves;
     }
 
-    // ---------- 交互 ----------
     function onClick(x, y) {
-        if (gameOver) return;
+        if (gameOver || aiThinking) return;
         if (turn !== playerSide) return;
         const p = board[y][x];
         if (selected && validMoves.some(m => m.x === x && m.y === y)) {
             applyMove({ from: selected, to: { x, y } });
             selected = null; validMoves = [];
             render();
-            if (!gameOver) setTimeout(aiPlay, 250);
+            if (!gameOver) scheduleAI();
             return;
         }
         if (p && ((playerSide === 'red' && isRed(p)) || (playerSide === 'black' && isBlack(p)))) {
@@ -249,7 +248,6 @@
     }
 
     function checkGameEnd() {
-        // 简化判断：如果一方没有将/帅，游戏结束
         let redKing = false, blackKing = false;
         for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
             if (board[y][x] === 'K') redKing = true;
@@ -262,7 +260,6 @@
         }
     }
 
-    // ---------- AI ----------
     function evaluate() {
         let s = 0;
         for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
@@ -322,6 +319,18 @@
         }
     }
 
+    function scheduleAI() {
+        if (gameOver || turn === playerSide) return;
+        aiThinking = true;
+        turnLabel.textContent = 'AI 思考中…';
+        // 让浏览器先渲染，再执行重计算
+        setTimeout(() => {
+            aiPlay();
+            aiThinking = false;
+            render();
+        }, 30);
+    }
+
     function aiPlay() {
         if (gameOver || turn === playerSide) return;
         const depth = parseInt(aiDepthEl.value, 10);
@@ -344,20 +353,17 @@
             }
         }
         if (bestMv) applyMove(bestMv);
-        render();
     }
 
-    // ---------- 生命周期 ----------
     function newGame() {
         board = JSON.parse(JSON.stringify(INIT));
         selected = null; validMoves = [];
         turn = 'red';
         gameOver = false;
+        aiThinking = false;
         playerSideEl.textContent = playerSide === 'red' ? '红方' : '黑方';
         render();
-        if (playerSide === 'black') {
-            setTimeout(aiPlay, 400);
-        }
+        if (playerSide === 'black') scheduleAI();
     }
 
     document.getElementById('btnNew').onclick = newGame;
