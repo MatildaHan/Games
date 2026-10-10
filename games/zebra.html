@@ -94,14 +94,19 @@
         { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' }
     ];
 
+    const MAX_HINTS = 3;
+
     let state = [];
-    let revealed = []; // 记录已被提示揭示的格子
+    let revealed = [];
+    let hintCount = 0;
+
     const wrap = document.getElementById('tableWrap');
     const resultEl = document.getElementById('result');
 
     function init() {
         state = Array.from({ length: 5 }, () => ({ nationality:'', color:'', drink:'', smoke:'', pet:'' }));
         revealed = Array.from({ length: 5 }, () => ({}));
+        hintCount = 0;
         resultEl.textContent = '';
         render();
     }
@@ -139,7 +144,6 @@
     }
 
     function check() {
-        // 1. 检查是否填满
         for (let i = 0; i < 5; i++) {
             for (const k of Object.keys(CATEGORIES)) {
                 if (!state[i][k]) {
@@ -148,7 +152,6 @@
                 }
             }
         }
-        // 2. 检查每列不重复
         for (const k of Object.keys(CATEGORIES)) {
             const vals = state.map(s => s[k]);
             if (new Set(vals).size !== 5) {
@@ -156,7 +159,6 @@
                 return;
             }
         }
-        // 3. 全部正确？
         let allCorrect = true;
         for (let i = 0; i < 5; i++) {
             for (const k of Object.keys(CATEGORIES)) {
@@ -169,7 +171,10 @@
     }
 
     function hint() {
-        // 找出所有尚未正确填写的位置
+        if (hintCount >= MAX_HINTS) {
+            resultEl.textContent = `⚠️ 提示次数已用完（${MAX_HINTS} 次）`;
+            return;
+        }
         const empty = [];
         for (let i = 0; i < 5; i++) {
             for (const k of Object.keys(CATEGORIES)) {
@@ -185,7 +190,8 @@
         const slot = empty[Math.floor(Math.random() * empty.length)];
         state[slot.house][slot.cat] = CORRECT[slot.house][slot.cat];
         revealed[slot.house][slot.cat] = true;
-        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${LABELS[slot.cat]}」`;
+        hintCount++;
+        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${LABELS[slot.cat]}」（剩余提示 ${MAX_HINTS - hintCount} 次）`;
         render();
     }
 
