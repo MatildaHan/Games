@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>灭灯</title>
+<link rel="stylesheet" href="../css/common.css">
+<style>
+.lo-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.lo-info { color: var(--text-sub); font-size: 14px; }
+.lo-info b { color: var(--primary-color); }
+.lo-grid { display: grid; gap: 6px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 12px; }
+.lo-cell {
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    background: #334155;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+}
+.lo-cell.on { background: #facc15; box-shadow: 0 0 20px rgba(250,204,21,0.7), inset 0 0 12px rgba(255,255,255,0.5); }
+.lo-cell:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+<div class="game-inner">
+    <div class="lo-wrap">
+        <div class="lo-info">目标：让所有灯都熄灭。点击一盏灯会翻转自己和上下左右的灯。步数：<b id="steps">0</b></div>
+        <div id="loGrid" class="lo-grid"></div>
+        <div style="display:flex; gap:12px;">
+            <button class="action-btn" id="btnNew">新游戏</button>
+            <button class="action-btn outline" id="btnLv">切换尺寸</button>
+        </div>
+    </div>
+</div>
+<script>
+const SIZES = [3, 5, 7];
+let sizeIdx = 0;
+let N, grid, steps;
+
+function init() {
+    N = SIZES[sizeIdx];
+    grid = Array.from({length: N}, () => Array(N).fill(0));
+    steps = 0;
+    document.getElementById('steps').innerText = steps;
+    // 随机打乱：从全灭状态随机点击若干次
+    const shuffleTimes = N * N * 2;
+    for (let i = 0; i < shuffleTimes; i++) {
+        const x = Math.floor(Math.random() * N);
+        const y = Math.floor(Math.random() * N);
+        toggle(x, y, false);
+    }
+    // 如果恰好全灭，重新打乱
+    if (grid.flat().every(v => v === 0)) init();
+    else render();
+}
+
+function toggle(x, y, count = true) {
+    const dirs = [[0,0],[0,1],[0,-1],[1,0],[-1,0]];
+    dirs.forEach(([dx, dy]) => {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < N && ny >= 0 && ny < N) grid[ny][nx] ^= 1;
+    });
+    if (count) {
+        steps++;
+        document.getElementById('steps').innerText = steps;
+    }
+}
+
+function render() {
+    const el = document.getElementById('loGrid');
+    el.style.gridTemplateColumns = `repeat(${N}, 56px)`;
+    el.innerHTML = '';
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'lo-cell' + (grid[y][x] ? ' on' : '');
+        cell.onclick = () => {
+            toggle(x, y);
+            render();
+            if (grid.flat().every(v => v === 0)) {
+                setTimeout(() => alert(`🎉 全部熄灭！共 ${steps} 步`), 100);
+            }
+        };
+        el.appendChild(cell);
+    }
+}
+
+document.getElementById('btnNew').onclick = init;
+document.getElementById('btnLv').onclick = () => {
+    sizeIdx = (sizeIdx + 1) % SIZES.length;
+    init();
+};
+init();
+</script>
+</body>
+</html>

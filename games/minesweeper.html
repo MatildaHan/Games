@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>扫雷</title>
+<link rel="stylesheet" href="../css/common.css">
+<style>
+.mine-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.mine-info { display: flex; gap: 20px; color: var(--text-sub); font-size: 14px; }
+.mine-info b { color: var(--primary-color); }
+.mine-grid { display: grid; gap: 2px; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 8px; }
+.mine-cell {
+    width: 30px; height: 30px;
+    display: flex; justify-content: center; align-items: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.1s;
+    user-select: none;
+}
+.mine-cell:hover { background: rgba(255,255,255,0.2); }
+.mine-cell.revealed { background: rgba(0,0,0,0.3); cursor: default; }
+.mine-cell.mine { background: #ef4444; color: #fff; }
+.mine-cell.flag { background: #fbbf24; color: #000; }
+.mine-cell.n1 { color: #60a5fa; } .mine-cell.n2 { color: #4ade80; }
+.mine-cell.n3 { color: #f87171; } .mine-cell.n4 { color: #a78bfa; }
+.mine-cell.n5 { color: #fb923c; } .mine-cell.n6 { color: #22d3ee; }
+.mine-cell.n7 { color: #f472b6; } .mine-cell.n8 { color: #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="game-inner">
+    <div class="mine-wrap">
+        <div class="mine-info">
+            <span>💣 剩余：<b id="mineLeft">10</b></span>
+            <span>⏱ 时间：<b id="timeEl">0</b>s</span>
+            <span>难度：<b id="lvEl">简单</b></span>
+        </div>
+        <div id="mineGrid" class="mine-grid"></div>
+        <div style="display:flex; gap:12px;">
+            <button class="action-btn" id="btnNew">新游戏</button>
+            <button class="action-btn outline" id="btnLv">切换难度</button>
+        </div>
+    </div>
+</div>
+<script>
+const LEVELS = [
+    { rows: 9, cols: 9, mines: 10, name: '简单' },
+    { rows: 16, cols: 16, mines: 40, name: '困难' },
+    { rows: 16, cols: 30, mines: 99, name: '专业' },
+];
+let levelIdx = 0;
+let rows, cols, mines;
+let grid, revealed, flagged, gameOver, started;
+let timer, seconds;
+
+function init() {
+    const lv = LEVELS[levelIdx];
+    rows = lv.rows; cols = lv.cols; mines = lv.mines;
+    grid = Array.from({length: rows}, () => Array(cols).fill(0));
+    revealed = Array.from({length: rows}, () => Array(cols).fill(false));
+    flagged = Array.from({length: rows}, () => Array(cols).fill(false));
+    gameOver = false; started = false; seconds = 0;
+    document.getElementById('mineLeft').innerText = mines;
+    document.getElementById('timeEl').innerText = 0;
+    document.getElementById('lvEl').innerText = lv.name;
+    clearInterval(timer);
+    render();
+}
+
+function placeMines(sx, sy) {
+    let placed = 0;
+    while (placed < mines) {
+        const x = Math.floor(Math.random() * cols);
+        const y = Math.floor(Math.random() * rows);
+        if (grid[y][x] === -1) continue;
+        if (Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1) continue;
+        grid[y][x] = -1;
+        placed++;
+    }
+    // 计算数字
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        if (grid[y][x] === -1) continue;
+        let cnt = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const ny = y + dy, nx = x + dx;
+            if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] === -1) cnt++;
+        }
+        grid[y][x] = cnt;
+    }
+}
+
+function render() {
+    const el = document.getElementById('mineGrid');
+    el.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+    el.innerHTML = '';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'mine-cell';
+        if (revealed[y][x]) {
+            cell.classList.add('revealed');
+            if (grid[y][x] === -1) { cell.classList.add('mine'); cell.innerText = '💣'; }
+            else if (grid[y][x] > 0) { cell.innerText = grid[y][x]; cell.classList.add('n' + grid[y][x]); }
+        } else if (flagged[y][x]) {
+            cell.classList.add('flag'); cell.innerText = '🚩';
+        }
+        cell.onclick = () => onLeftClick(x, y);
+        cell.oncontextmenu = e => { e.preventDefault(); onRightClick(x, y); };
+        el.appendChild(cell);
+    }
+}
+
+function onLeftClick(x, y) {
+    if (gameOver || revealed[y][x] || flagged[y][x]) return;
+    if (!started) {
+        started = true;
+        placeMines(x, y);
+        timer = setInterval(() => { seconds++; document.getElementById('timeEl').innerText = seconds; }, 1000);
+    }
+    if (grid[y][x] === -1) {
+        gameOver = true;
+        revealed[y][x] = true;
+        clearInterval(timer);
+        render();
+        setTimeout(() => alert('💥 踩雷了！'), 100);
+        return;
+    }
+    floodReveal(x, y);
+    render();
+    checkWin();
+}
+
+function floodReveal(x, y) {
+    if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+    if (revealed[y][x] || flagged[y][x]) return;
+    revealed[y][x] = true;
+    if (grid[y][x] === 0) {
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            floodReveal(x + dx, y + dy);
+        }
+    }
+}
+
+function onRightClick(x, y) {
+    if (gameOver || revealed[y][x]) return;
+    flagged[y][x] = !flagged[y][x];
+    let cnt = 0;
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) if (flagged[y][x]) cnt++;
+    document.getElementById('mineLeft').innerText = mines - cnt;
+    render();
+    checkWin();
+}
+
+function checkWin() {
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        if (grid[y][x] !== -1 && !revealed[y][x]) return;
+    }
+    gameOver = true;
+    clearInterval(timer);
+    setTimeout(() => alert(`🎉 恭喜通关！用时 ${seconds} 秒`), 100);
+}
+
+document.getElementById('btnNew').onclick = init;
+document.getElementById('btnLv').onclick = () => {
+    levelIdx = (levelIdx + 1) % LEVELS.length;
+    init();
+};
+init();
+</script>
+</body>
+</html>
