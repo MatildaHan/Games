@@ -10,9 +10,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     justify-content: center;
 }
 .nono-toolbar {
@@ -31,7 +31,7 @@
     background: rgba(255,255,255,0.1);
     border: 2px solid rgba(255,255,255,0.5);
     border-radius: 6px;
-    overflow: hidden;
+    overflow: auto;
     max-width: 100%;
     max-height: 60vh;
     touch-action: manipulation;
@@ -72,13 +72,11 @@
 
 .nono-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
-/* ---------- 手机 ---------- */
 @media (max-width: 767px) {
     .nono-toolbar { font-size: 12px; gap: 10px; }
     .nono-cell { width: var(--cell, 26px); height: var(--cell, 26px); }
     .nono-clue { font-size: 10px; }
     .nono-btns .btn { font-size: 12px; padding: 8px 12px; }
-    .nono-grid { max-height: 55vh; }
 }
 </style>
 </head>
@@ -153,28 +151,27 @@
         return n;
     }
 
-    function computeCellSize(size) {
-        // 动态计算格子的像素大小，避免超出容器
+    function computeCellSize(size, maxRowClueLen, maxColClueLen) {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        // 预留：线索区、按钮、工具栏、padding
-        const availableW = Math.min(vw - 60, 700);
-        const availableH = Math.min(vh - 260, 500);
-        const clueRatio = size === 5 ? 0.6 : size === 10 ? 0.8 : 0.85;
-        const cellByW = availableW / (size + size * clueRatio * 0.55);
-        const cellByH = availableH / size;
-        const c = Math.min(cellByW, cellByH, 34);
-        return Math.max(14, Math.floor(c));
+        const availW = Math.min(vw - 60, 700);
+        const availH = Math.min(vh - 260, 500);
+        const clueW = maxRowClueLen * 14; // 线索列像素宽度
+        const clueH = maxColClueLen * 14; // 线索行像素高度
+        const byW = Math.floor((availW - clueW - size * 2) / size);
+        const byH = Math.floor((availH - clueH - size * 2) / size);
+        return Math.max(12, Math.min(byW, byH, 34));
     }
 
     function render() {
         const size = solution.length;
-        const cell = computeCellSize(size);
-        const clueSize = Math.max(18, Math.floor(cell * 0.85));
         const rowClues = solution.map(rowClue);
         const colClues = Array.from({ length: size }, (_, c) => colClue(solution, c));
         const maxRowClue = Math.max(...rowClues.map(c => c.length));
         const maxColClue = Math.max(...colClues.map(c => c.length));
+
+        const cell = computeCellSize(size, maxRowClue, maxColClue);
+        const clueSize = Math.max(14, Math.floor(cell * 0.7));
 
         gridEl.style.setProperty('--cell', cell + 'px');
         gridEl.innerHTML = '';
@@ -216,7 +213,7 @@
         }
     }
 
-    // 事件委托：左键单击切换填色，右键或长按标记 X
+    // 事件委托
     let longPressTimer = null;
     let longPressHandled = false;
 
@@ -232,14 +229,14 @@
     });
 
     gridEl.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (longPressHandled) return;
         const cell = e.target.closest('.nono-cell');
         if (!cell) return;
-        e.preventDefault();
         const r = +cell.dataset.r, c = +cell.dataset.c;
         toggle(r, c, 2);
     });
 
-    // 手机长按 → 标记
     gridEl.addEventListener('touchstart', e => {
         const cell = e.target.closest('.nono-cell');
         if (!cell) return;
@@ -264,15 +261,12 @@
         } else {
             gridState[r][c] = gridState[r][c] === 2 ? 0 : 2;
         }
-        // 局部更新（避免整盘重绘）
-        const size = solution.length;
         const cellEl = gridEl.querySelector(`.nono-cell[data-r="${r}"][data-c="${c}"]`);
         if (cellEl) {
             cellEl.classList.toggle('filled', gridState[r][c] === 1);
             cellEl.classList.toggle('marked', gridState[r][c] === 2);
         }
         updateRemain();
-        checkWin();
     }
 
     function updateRemain() {
@@ -291,30 +285,74 @@
         }
     }
 
-    function checkWin() {
-        const size = solution.length;
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                const want = solution[r][c] === 1;
-                const have = gridState[r][c] === 1;
-                if (want !== have) return;
-            }
+    // ============================================================
+    // 校验：按线索（不比对 solution）
+    // ============================================================
+    // 从当前填格状态推导某行/列的"线索"
+    function deriveClue(arr) {
+        const clue = [];
+        let cnt = 0;
+        for (const v of arr) {
+            if (v === 1) cnt++;
+            else { if (cnt) clue.push(cnt); cnt = 0; }
         }
-        setTimeout(() => alert('🎉 恭喜完成数织！'), 50);
+        if (cnt) clue.push(cnt);
+        return clue.length ? clue : [0];
+    }
+
+    function cluesEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+        return true;
+    }
+
+    function checkByClues() {
+        const size = solution.length;
+        // 目标线索
+        const targetRowClues = solution.map(rowClue);
+        const targetColClues = Array.from({ length: size }, (_, c) => colClue(solution, c));
+
+        // 当前填格状态推导出的线索
+        const curRows = gridState.map(row => row.map(v => v === 1 ? 1 : 0));
+        const curCols = Array.from({ length: size }, (_, c) => curRows.map(r => r[c]));
+
+        const curRowClues = curRows.map(deriveClue);
+        const curColClues = curCols.map(deriveClue);
+
+        for (let r = 0; r < size; r++) {
+            if (!cluesEqual(curRowClues[r], targetRowClues[r])) return false;
+        }
+        for (let c = 0; c < size; c++) {
+            if (!cluesEqual(curColClues[c], targetColClues[c])) return false;
+        }
+        return true;
+    }
+
+    function checkWin() {
+        if (checkByClues()) {
+            setTimeout(() => alert('🎉 恭喜完成数织！'), 50);
+        }
     }
 
     function checkAnswer() {
-        const size = solution.length;
-        let errors = 0;
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                const want = solution[r][c] === 1;
-                const have = gridState[r][c] === 1;
-                if (want !== have) errors++;
+        if (checkByClues()) {
+            alert('🎉 全部正确！');
+        } else {
+            // 统计哪些行列不对
+            const size = solution.length;
+            let badRows = 0, badCols = 0;
+            const targetRowClues = solution.map(rowClue);
+            const targetColClues = Array.from({ length: size }, (_, c) => colClue(solution, c));
+            const curRows = gridState.map(row => row.map(v => v === 1 ? 1 : 0));
+            const curCols = Array.from({ length: size }, (_, c) => curRows.map(r => r[c]));
+            for (let r = 0; r < size; r++) {
+                if (!cluesEqual(deriveClue(curRows[r]), targetRowClues[r])) badRows++;
             }
+            for (let c = 0; c < size; c++) {
+                if (!cluesEqual(deriveClue(curCols[c]), targetColClues[c])) badCols++;
+            }
+            alert(`还有 ${badRows} 行、${badCols} 列不符合线索`);
         }
-        if (errors === 0) alert('🎉 全部正确！');
-        else alert(`还有 ${errors} 处需要调整`);
     }
 
     function newGame() {
@@ -335,7 +373,16 @@
         newGame();
     };
 
-    // 屏幕尺寸变化时重绘
+    // 填格后自动检测
+    const origToggle = toggle;
+    // 简单起见：在 toggle 里调用 checkWin —— 已在上面 toggle 中通过 updateRemain 之后调用
+    // 为保证自动检测，重写 toggle：包一层
+    const _toggle = toggle;
+    toggle = function (r, c, mode) {
+        _toggle(r, c, mode);
+        checkWin();
+    };
+
     let resizeTimer = null;
     window.addEventListener('resize', () => {
         if (resizeTimer) clearTimeout(resizeTimer);
