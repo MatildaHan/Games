@@ -7,8 +7,7 @@
 <link rel="stylesheet" href="../css/common.css">
 <style>
 /* ============================================================
-   像素复古主题：作用域 .px-theme
-   关键修复 1：去掉 Google Fonts，改用系统等宽
+   像素复古主题
    ============================================================ */
 .px-theme,
 .px-theme * {
@@ -20,7 +19,6 @@
     image-rendering: crisp-edges;
 }
 
-/* 像素主题背景 */
 .px-theme.game-inner {
     background:
         radial-gradient(ellipse at center, #1a2140 0%, #0b0e1a 70%),
@@ -39,7 +37,6 @@
     background-size: 32px 32px;
     pointer-events: none;
 }
-/* 关键修复 6：扫描线密度降低（1px→2px），透明度降低 */
 .px-theme.game-inner::after {
     content: '';
     position: absolute;
@@ -89,7 +86,6 @@
     flex-shrink: 0;
 }
 
-/* 像素卡片 */
 .px-theme .px-card {
     background: var(--px-panel);
     border: 3px solid var(--px-border);
@@ -117,7 +113,6 @@
     text-shadow: 2px 2px 0 #000;
 }
 
-/* 画布 */
 .px-theme #tetris-canvas {
     display: block;
     background: #000;
@@ -142,7 +137,6 @@
     image-rendering: pixelated;
 }
 
-/* 像素按钮 */
 .px-theme .px-btn {
     background: var(--px-panel-2);
     color: var(--px-text);
@@ -188,14 +182,13 @@
 .px-theme .px-btn.primary:hover:not(:disabled) { background: #fff; }
 .px-theme .px-btn.tall { height: 80px; font-size: 13px; }
 
-/* 触屏按钮 */
 .px-theme .touch-controls {
     display: none;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     max-width: 360px;
-    margin: 12px auto 0;
+    margin: 8px auto 0;
 }
 .px-theme .px-touch-btn {
     background: var(--px-panel-2);
@@ -205,7 +198,7 @@
         inset 3px 3px 0 0 var(--px-border-hi),
         0 0 0 3px var(--px-bg);
     color: var(--px-text);
-    height: 56px;
+    height: 52px;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -221,7 +214,6 @@
     background: var(--px-border);
 }
 
-/* 帮助面板 */
 .px-theme .px-help {
     font-size: 10px;
     line-height: 1.8;
@@ -235,43 +227,88 @@
     border: 1px solid var(--px-border);
 }
 
-/* 响应式 */
 @media (max-width: 1023px) {
     .px-theme .tetris-layout { gap: 16px; }
 }
 
+/* ============================================================
+   手机端：画布铺满屏宽，侧栏移到上下
+   ============================================================ */
 @media (max-width: 767px) {
-    .px-theme.game-inner { padding: 8px; }
+    .px-theme.game-inner {
+        padding: 6px;
+    }
     .px-theme .tetris-layout {
         flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 12px;
         flex-wrap: nowrap;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 8px;
+        width: 100%;
+        min-height: auto;
     }
+    /* 侧栏横排，占满宽度 */
     .px-theme .tetris-side {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
         width: 100%;
-        gap: 8px;
+        gap: 6px;
     }
     .px-theme .tetris-side .px-card {
-        flex: 1 1 100px;
-        min-width: 100px;
-        padding: 8px;
-        text-align: center;
+        flex: 1 1 calc(33% - 6px);
+        min-width: 0;
+        padding: 6px;
+        border-width: 2px;
+        box-shadow:
+            inset 0 0 0 2px var(--px-bg),
+            inset 0 0 0 4px var(--px-panel-2),
+            0 0 0 2px var(--px-bg),
+            3px 3px 0 0 rgba(0, 0, 0, 0.5);
     }
-    .px-theme .tetris-side .px-card .card-title { font-size: 9px; margin-bottom: 4px; }
+    .px-theme .tetris-side .px-card .card-title {
+        font-size: 8px;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+    }
     .px-theme .tetris-side .px-card .card-value { font-size: 14px; }
-    .px-theme .tetris-side #btnStart { flex: 1 1 100%; }
+    .px-theme .tetris-side .px-card canvas {
+        width: 60px;
+        height: 60px;
+    }
+    .px-theme .tetris-side #btnStart {
+        flex: 1 1 100%;
+        min-height: 44px;
+    }
     .px-theme .tetris-side .px-btn.tall { display: none; }
     .px-theme .tetris-side .px-help { display: none; }
-    .px-theme .touch-controls { display: grid; }
-    .px-theme #tetris-canvas { width: auto; max-height: 45vh; }
+
+    /* 关键：画布铺满屏宽 */
+    .px-theme #tetris-canvas {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: 60vh;
+        align-self: center;
+        box-sizing: border-box;
+    }
+
+    /* 触屏按键显示，宽度与画布一致 */
+    .px-theme .touch-controls {
+        display: grid;
+        width: 100%;
+        max-width: none;
+        margin: 6px 0 0;
+    }
+    .px-theme .px-touch-btn {
+        height: 48px;
+        font-size: 18px;
+    }
 }
 
-/* 像素模态框 */
+/* ============================================================
+   像素模态框
+   ============================================================ */
 .px-theme .modal-box {
     background: var(--px-panel);
     border: 4px solid var(--px-border);
@@ -403,18 +440,15 @@
     const ctx = canvas.getContext('2d');
     const nextCanvas = document.getElementById('next-canvas');
     const nextCtx = nextCanvas.getContext('2d');
-    setupDPR(canvas, ctx, 240, 480);
-    setupDPR(nextCanvas, nextCtx, 120, 120);
 
-    function setupDPR(c, context, w, h) {
-        const dpr = window.devicePixelRatio || 1;
-        c.width = w * dpr;
-        c.height = h * dpr;
-        c.style.width = w + 'px';
-        c.style.height = h + 'px';
-        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // 逻辑尺寸固定为 240×480；CSS 负责缩放
+    function setupCanvas(c, context, w, h) {
+        c.width = w;
+        c.height = h;
         context.imageSmoothingEnabled = false;
     }
+    setupCanvas(canvas, ctx, 240, 480);
+    setupCanvas(nextCanvas, nextCtx, 120, 120);
 
     const scoreEl = document.getElementById('score');
     const levelEl = document.getElementById('level');
