@@ -337,14 +337,14 @@ body.embedded::before { display: none; }
         height: auto;
     }
 
-    .game-inner {
-        padding: 8px;
-        align-items: stretch;
-        min-height: 100%;
-        overflow-y: auto;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
+.game-inner {
+    padding: 6px;
+    align-items: stretch;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 
     .modal-box { padding: 24px 20px; width: 90vw; }
     .modal-box h2 { font-size: 20px; }
@@ -360,7 +360,7 @@ body.embedded::before { display: none; }
 @media (max-width: 380px) {
     .nav-btn { font-size: 10px; min-height: 30px; padding: 4px 2px; }
     .game-nav { padding: 4px; gap: 3px; }
-    .game-inner { padding: 6px; }
+    .game-inner { padding: 4px; }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
