@@ -5,68 +5,98 @@
 <title>爱因斯坦谜题</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.zebra-wrap { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 900px; }
-.zebra-clues {
+.zebra-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 920px; }
+
+/* 顶部工具条 */
+.zebra-toolbar {
+    display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    background: rgba(0,0,0,0.3);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text-sub);
+}
+.zebra-toolbar b { color: var(--primary); }
+.zebra-nav { display: flex; gap: 8px; }
+
+/* 题目与线索 */
+.zebra-problem {
     background: rgba(0,0,0,0.3);
     padding: 16px 20px;
     border-radius: 12px;
     font-size: 13px; line-height: 1.9;
     color: var(--text-sub);
+    max-height: 220px;
+    overflow-y: auto;
 }
-.zebra-clues b { color: var(--primary); }
+.zebra-problem b { color: var(--primary); }
+.zebra-problem .q {
+    color: #fff;
+    font-weight: 700;
+    margin-top: 6px;
+    display: block;
+}
+
+/* 表格 */
 .zebra-table {
     width: 100%; border-collapse: collapse;
     background: rgba(0,0,0,0.2);
     border-radius: 8px; overflow: hidden;
+    table-layout: fixed;
 }
 .zebra-table th, .zebra-table td {
-    padding: 8px 10px; text-align: center;
+    padding: 6px 6px; text-align: center;
     border: 1px solid rgba(255,255,255,0.08);
-    font-size: 13px;
+    font-size: 12.5px;
 }
-.zebra-table th { background: rgba(0,0,0,0.3); color: var(--primary); font-weight: 600; }
+.zebra-table th {
+    background: rgba(0,0,0,0.3);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 12px;
+}
 .zebra-table select {
     background: rgba(30,41,59,0.9); color: var(--text);
     border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-    padding: 4px 8px; font-size: 13px; cursor: pointer;
+    padding: 4px 4px; font-size: 12.5px; cursor: pointer;
     outline: none; font-family: inherit; width: 100%;
+    text-align-last: center;
 }
 .zebra-table select option { background: #1e293b; }
 .zebra-table td.correct { background: rgba(74,222,128,0.25); }
 .zebra-table td.wrong { background: rgba(239,68,68,0.15); }
+
 .zebra-btns { display: flex; gap: 12px; justify-content: center; }
-.zebra-result { color: var(--primary); font-weight: 700; font-size: 15px; min-height: 22px; text-align: center; }
+.zebra-result {
+    color: var(--primary); font-weight: 700; font-size: 15px;
+    min-height: 22px; text-align: center;
+}
+.zebra-result.warn { color: #fbbf24; }
+.zebra-result.error { color: var(--danger); }
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="zebra-wrap">
-        <div class="zebra-clues">
-            <b>题目：</b>有 5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物都不同。<br>
-            <b>线索：</b><br>
-            1. 英国人住在红房子里。<br>
-            2. 瑞典人养狗。<br>
-            3. 丹麦人喝茶。<br>
-            4. 绿房子在白房子的左边。<br>
-            5. 绿房子的主人喝咖啡。<br>
-            6. 抽 Pall Mall 的人养鸟。<br>
-            7. 黄房子的主人抽 Dunhill。<br>
-            8. 中间房子的主人喝牛奶。<br>
-            9. 挪威人住在第一栋房子。<br>
-            10. 抽 Blend 的人住在养猫的人旁边。<br>
-            11. 养马的人住在抽 Dunhill 的人旁边。<br>
-            12. 抽 Blue Master 的人喝啤酒。<br>
-            13. 德国人抽 Prince。<br>
-            14. 挪威人住在蓝房子旁边。<br>
-            15. 抽 Blend 的人有一个喝水的邻居。<br>
-            <b>问题：谁养鱼？</b>
+        <div class="zebra-toolbar">
+            <div>题目 <b id="idxLabel">1</b> / <b id="totalLabel">10</b> · <b id="titleLabel">—</b></div>
+            <div class="zebra-nav">
+                <button class="btn ghost" id="btnPrev" style="padding:6px 12px; font-size:13px;">← 上一题</button>
+                <button class="btn ghost" id="btnNext" style="padding:6px 12px; font-size:13px;">下一题 →</button>
+                <button class="btn ghost" id="btnRandom" style="padding:6px 12px; font-size:13px;">🎲 随机</button>
+            </div>
         </div>
+
+        <div class="zebra-problem" id="problem"></div>
+
         <div id="tableWrap"></div>
+
         <div class="zebra-btns">
             <button class="btn" id="btnCheck">检查答案</button>
             <button class="btn ghost" id="btnHint">提示</button>
-            <button class="btn ghost" id="btnReset">重置</button>
+            <button class="btn ghost" id="btnReset">重置本题</button>
         </div>
+
         <div class="zebra-result" id="result"></div>
     </div>
 </div>
@@ -76,58 +106,441 @@
 (function () {
     'use strict';
 
-    const CATEGORIES = {
-        nationality: ['挪威人','丹麦人','英国人','德国人','瑞典人'],
-        color: ['黄色','蓝色','红色','绿色','白色'],
-        drink: ['水','茶','牛奶','咖啡','啤酒'],
-        smoke: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'],
-        pet: ['猫','马','鸟','鱼','狗']
-    };
-
-    const LABELS = { nationality:'国籍', color:'颜色', drink:'饮料', smoke:'香烟', pet:'宠物' };
-
-    const CORRECT = [
-        { nationality:'挪威人', color:'黄色', drink:'水',   smoke:'Dunhill',     pet:'猫' },
-        { nationality:'丹麦人', color:'蓝色', drink:'茶',   smoke:'Blend',       pet:'马' },
-        { nationality:'英国人', color:'红色', drink:'牛奶', smoke:'Pall Mall',   pet:'鸟' },
-        { nationality:'德国人', color:'绿色', drink:'咖啡', smoke:'Prince',      pet:'鱼' },
-        { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' }
-    ];
-
     const MAX_HINTS = 3;
 
-    let state = [];
-    let revealed = [];
+    // ============================================================
+    // 题库：10 道经典逻辑谜题
+    // 每道题结构：
+    //   title: 题目名
+    //   intro: 引言
+    //   clues: [线索文本]
+    //   question: 最终问题
+    //   categories: { key: { label: '列名', values: [...] } }
+    //   answer: [ { key1: v1, key2: v2, ... }, ... ] 每栋房子的正确组合（按房子顺序）
+    //   target: { house: 索引, key: 'pet', value: '鱼' }  用于"检查"提示答案
+    // ============================================================
+
+    const PUZZLES = [
+        // 1. 经典爱因斯坦谜题
+        {
+            title: '爱因斯坦谜题',
+            intro: '5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物各不相同。',
+            clues: [
+                '英国人住在红房子里。',
+                '瑞典人养狗。',
+                '丹麦人喝茶。',
+                '绿房子在白房子的左边。',
+                '绿房子的主人喝咖啡。',
+                '抽 Pall Mall 的人养鸟。',
+                '黄房子的主人抽 Dunhill。',
+                '中间房子的主人喝牛奶。',
+                '挪威人住在第一栋房子。',
+                '抽 Blend 的人住在养猫的人旁边。',
+                '养马的人住在抽 Dunhill 的人旁边。',
+                '抽 Blue Master 的人喝啤酒。',
+                '德国人抽 Prince。',
+                '挪威人住在蓝房子旁边。',
+                '抽 Blend 的人有一个喝水的邻居。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                nationality: { label: '国籍', values: ['挪威人','丹麦人','英国人','德国人','瑞典人'] },
+                color:       { label: '颜色', values: ['黄色','蓝色','红色','绿色','白色'] },
+                drink:       { label: '饮料', values: ['水','茶','牛奶','咖啡','啤酒'] },
+                smoke:       { label: '香烟', values: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'] },
+                pet:         { label: '宠物', values: ['猫','马','鸟','鱼','狗'] }
+            },
+            answer: [
+                { nationality:'挪威人', color:'黄色', drink:'水',   smoke:'Dunhill',     pet:'猫' },
+                { nationality:'丹麦人', color:'蓝色', drink:'茶',   smoke:'Blend',       pet:'马' },
+                { nationality:'英国人', color:'红色', drink:'牛奶', smoke:'Pall Mall',   pet:'鸟' },
+                { nationality:'德国人', color:'绿色', drink:'咖啡', smoke:'Prince',      pet:'鱼' },
+                { nationality:'瑞典人', color:'白色', drink:'啤酒', smoke:'Blue Master', pet:'狗' }
+            ],
+            target: { house: 3, key: 'nationality', value: '德国人' }
+        },
+
+        // 2. 五座房子的足球迷
+        {
+            title: '足球迷',
+            intro: '5 位朋友排成一排住在不同城市，各自支持不同球队、喝不同饮料、养不同宠物。',
+            clues: [
+                '北京人支持国安。',
+                '上海人喝咖啡。',
+                '广州人养猫。',
+                '深圳人支持恒大。',
+                '中间位置的人喝牛奶。',
+                '支持上港的人住在支持鲁能的人旁边。',
+                '成都人住在第一栋房子。',
+                '喝啤酒的人支持苏宁。',
+                '养狗的人住在喝牛奶的人旁边。',
+                '支持鲁能的人喝矿泉水。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                city:  { label: '城市', values: ['北京人','上海人','广州人','深圳人','成都人'] },
+                drink: { label: '饮料', values: ['水','咖啡','牛奶','啤酒','矿泉水'] },
+                team:  { label: '球队', values: ['国安','上港','鲁能','恒大','苏宁'] },
+                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','仓鼠'] }
+            },
+            answer: [
+                { city:'成都人', drink:'矿泉水', team:'鲁能', pet:'仓鼠' },
+                { city:'上海人', drink:'咖啡',   team:'上港', pet:'狗' },
+                { city:'北京人', drink:'牛奶',   team:'国安', pet:'鱼' },
+                { city:'深圳人', drink:'啤酒',   team:'恒大', pet:'鸟' },
+                { city:'广州人', drink:'水',     team:'苏宁', pet:'猫' }
+            ],
+            target: { house: 2, key: 'city', value: '北京人' }
+        },
+
+        // 3. 五色房子与水果
+        {
+            title: '五色水果',
+            intro: '5 栋颜色不同的房子，每栋主人喜欢不同水果、饮料、乐器和运动。',
+            clues: [
+                '红房子的主人爱吃苹果。',
+                '蓝房子的主人喝咖啡。',
+                '绿房子的主人弹钢琴。',
+                '黄房子的主人打篮球。',
+                '中间房子的人喝牛奶。',
+                '白房子的主人住在绿房子的右边。',
+                '弹吉他的主人住在爱吃香蕉的主人旁边。',
+                '踢足球的人喝矿泉水。',
+                '喝橙汁的人养猫。',
+                '蓝房子的主人住在第一栋房子。'
+            ],
+            question: '谁爱吃香蕉？',
+            categories: {
+                color:  { label: '颜色', values: ['红色','蓝色','绿色','黄色','白色'] },
+                fruit:  { label: '水果', values: ['苹果','香蕉','橘子','葡萄','西瓜'] },
+                drink:  { label: '饮料', values: ['咖啡','牛奶','矿泉水','橙汁','茶'] },
+                music:  { label: '乐器', values: ['钢琴','吉他','小提琴','笛子','鼓'] },
+                sport:  { label: '运动', values: ['篮球','足球','网球','游泳','跑步'] }
+            },
+            answer: [
+                { color:'蓝色', fruit:'橘子', drink:'咖啡',   music:'小提琴', sport:'游泳' },
+                { color:'红色', fruit:'苹果', drink:'茶',     music:'笛子',   sport:'网球' },
+                { color:'黄色', fruit:'香蕉', drink:'牛奶',   music:'鼓',     sport:'篮球' },
+                { color:'绿色', fruit:'葡萄', drink:'矿泉水', music:'钢琴',   sport:'足球' },
+                { color:'白色', fruit:'西瓜', drink:'橙汁',   music:'吉他',   sport:'跑步' }
+            ],
+            target: { house: 2, key: 'color', value: '黄色' }
+        },
+
+        // 4. 五职业
+        {
+            title: '五位职业',
+            intro: '5 个人从事不同职业，住不同楼层，养不同宠物，喝不同饮料，喜欢不同运动。',
+            clues: [
+                '医生住在最高层。',
+                '律师养狗。',
+                '教师喝咖啡。',
+                '工程师住在律师的楼上。',
+                '养猫的人喝牛奶。',
+                '程序员的宠物是仓鼠。',
+                '喝啤酒的人喜欢打篮球。',
+                '喝矿泉水的人住在第一层。',
+                '喜欢游泳的人住在养狗的人楼上。',
+                '教师住在养鸟的人旁边。'
+            ],
+            question: '谁住在第 3 层？',
+            categories: {
+                job:   { label: '职业', values: ['医生','律师','教师','工程师','程序员'] },
+                floor: { label: '楼层', values: ['1层','2层','3层','4层','5层'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','仓鼠','兔子'] },
+                drink: { label: '饮料', values: ['咖啡','牛奶','啤酒','矿泉水','茶'] },
+                sport: { label: '运动', values: ['篮球','游泳','跑步','网球','羽毛球'] }
+            },
+            answer: [
+                { floor:'1层', job:'程序员', pet:'仓鼠', drink:'矿泉水', sport:'跑步' },
+                { floor:'2层', job:'教师',   pet:'鸟',   drink:'咖啡',   sport:'网球' },
+                { floor:'3层', job:'律师',   pet:'狗',   drink:'茶',     sport:'游泳' },
+                { floor:'4层', job:'工程师', pet:'猫',   drink:'牛奶',   sport:'羽毛球' },
+                { floor:'5层', job:'医生',   pet:'兔子', drink:'啤酒',   sport:'篮球' }
+            ],
+            target: { house: 2, key: 'job', value: '律师' }
+        },
+
+        // 5. 五国咖啡
+        {
+            title: '五国咖啡',
+            intro: '5 位来自不同国家的人，各自喝不同的咖啡、听不同音乐、养不同宠物、住不同颜色的房子。',
+            clues: [
+                '意大利人喝浓缩咖啡。',
+                '美国人听爵士乐。',
+                '法国人养狗。',
+                '德国人喝拿铁。',
+                '红房子的主人听古典乐。',
+                '日本人住在第一栋房子。',
+                '喝美式咖啡的人住在蓝房子里。',
+                '听摇滚乐的人养猫。',
+                '中间房子的人喝卡布奇诺。',
+                '绿房子的主人住在白房子的左边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                nationality: { label: '国籍', values: ['意大利人','美国人','法国人','德国人','日本人'] },
+                coffee:      { label: '咖啡', values: ['浓缩','拿铁','美式','卡布奇诺','摩卡'] },
+                music:       { label: '音乐', values: ['爵士','古典','摇滚','流行','民谣'] },
+                pet:         { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] },
+                color:       { label: '房子', values: ['红色','蓝色','绿色','白色','黄色'] }
+            },
+            answer: [
+                { nationality:'日本人',   coffee:'美式',     music:'流行', pet:'兔子', color:'蓝色' },
+                { nationality:'美国人',   coffee:'摩卡',     music:'爵士', pet:'猫',   color:'白色' },
+                { nationality:'意大利人', coffee:'卡布奇诺', music:'民谣', pet:'鸟',   color:'黄色' },
+                { nationality:'德国人',   coffee:'拿铁',     music:'古典', pet:'鱼',   color:'红色' },
+                { nationality:'法国人',   coffee:'浓缩',     music:'摇滚', pet:'狗',   color:'绿色' }
+            ],
+            target: { house: 3, key: 'nationality', value: '德国人' }
+        },
+
+        // 6. 五位棋手
+        {
+            title: '五位棋手',
+            intro: '5 位棋手坐在不同的位置，各自擅长不同棋类、喝不同茶、养不同宠物、穿不同颜色衣服。',
+            clues: [
+                '穿红衣服的人擅长象棋。',
+                '穿蓝衣服的人喝绿茶。',
+                '穿绿衣服的人擅长围棋。',
+                '中间位置的人喝红茶。',
+                '穿黄衣服的人擅长五子棋。',
+                '穿白衣服的人坐在穿绿衣服的人的右边。',
+                '养狗的人擅长国际象棋。',
+                '喝花茶的人养猫。',
+                '养鸟的人坐在养猫的人的左边。',
+                '喝乌龙茶的人坐在第一位置。'
+            ],
+            question: '谁擅长围棋？',
+            categories: {
+                color: { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
+                game:  { label: '棋类', values: ['象棋','围棋','五子棋','国际象棋','军棋'] },
+                tea:   { label: '茶',   values: ['绿茶','红茶','花茶','乌龙茶','普洱茶'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','仓鼠'] }
+            },
+            answer: [
+                { color:'白色', game:'军棋',       tea:'乌龙茶', pet:'鱼' },
+                { color:'蓝色', game:'国际象棋',   tea:'绿茶',   pet:'狗' },
+                { color:'红色', game:'象棋',       tea:'红茶',   pet:'鸟' },
+                { color:'绿色', game:'围棋',       tea:'花茶',   pet:'猫' },
+                { color:'黄色', game:'五子棋',     tea:'普洱茶', pet:'仓鼠' }
+            ],
+            target: { house: 3, key: 'color', value: '绿色' }
+        },
+
+        // 7. 五个学生
+        {
+            title: '五个学生',
+            intro: '5 位学生坐在一排，各自擅长不同学科、喜欢不同科目、养不同宠物、住不同城市。',
+            clues: [
+                '北京学生擅长数学。',
+                '上海学生喜欢物理。',
+                '广州学生养猫。',
+                '深圳学生擅长英语。',
+                '中间位置的学生喜欢化学。',
+                '成都学生坐在第一位置。',
+                '养狗的学生擅长语文。',
+                '喜欢生物的学生养鸟。',
+                '擅长数学的学生坐在养狗的学生旁边。',
+                '喜欢物理的学生住在成都学生旁边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                city:  { label: '城市', values: ['北京','上海','广州','深圳','成都'] },
+                skill: { label: '擅长', values: ['数学','英语','语文','物理','化学'] },
+                like:  { label: '喜欢', values: ['物理','化学','生物','地理','历史'] },
+                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','兔子'] }
+            },
+            answer: [
+                { city:'成都', skill:'化学', like:'地理', pet:'兔子' },
+                { city:'上海', skill:'物理', like:'物理', pet:'狗' },
+                { city:'北京', skill:'数学', like:'化学', pet:'鱼' },
+                { city:'深圳', skill:'英语', like:'生物', pet:'鸟' },
+                { city:'广州', skill:'语文', like:'历史', pet:'猫' }
+            ],
+            target: { house: 2, key: 'city', value: '北京' }
+        },
+
+        // 8. 五个花园
+        {
+            title: '五个花园',
+            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水、种在不同朝向。',
+            clues: [
+                '红色围栏的花园种玫瑰。',
+                '蓝色围栏的花园种郁金香。',
+                '绿色围栏的花园种百合。',
+                '中间花园种向日葵。',
+                '黄色围栏的花园种雏菊。',
+                '白色围栏的花园在绿色围栏的右边。',
+                '早上浇水的人在种向日葵的花园。',
+                '养蜜蜂的花园种玫瑰。',
+                '养蝴蝶的花园在养蜜蜂的花园旁边。',
+                '种郁金香的花园在中午浇水。'
+            ],
+            question: '谁种百合？',
+            categories: {
+                fence: { label: '围栏', values: ['红色','蓝色','绿色','黄色','白色'] },
+                flower:{ label: '花',   values: ['玫瑰','郁金香','百合','向日葵','雏菊'] },
+                time:  { label: '浇水', values: ['早上','中午','下午','傍晚','晚上'] },
+                pet:   { label: '昆虫', values: ['蜜蜂','蝴蝶','瓢虫','萤火虫','蚂蚁'] }
+            },
+            answer: [
+                { fence:'蓝色', flower:'郁金香', time:'中午', pet:'蚂蚁' },
+                { fence:'黄色', flower:'雏菊',   time:'傍晚', pet:'瓢虫' },
+                { fence:'红色', flower:'玫瑰',   time:'早上', pet:'蜜蜂' },
+                { fence:'绿色', flower:'百合',   time:'下午', pet:'蝴蝶' },
+                { fence:'白色', flower:'向日葵', time:'晚上', pet:'萤火虫' }
+            ],
+            target: { house: 3, key: 'fence', value: '绿色' }
+        },
+
+        // 9. 五辆汽车
+        {
+            title: '五辆汽车',
+            intro: '5 位车主，各自开不同品牌、不同颜色、不同能源、不同座位数的车，养不同宠物。',
+            clues: [
+                '开奔驰的人开红色车。',
+                '开宝马的人开黑色车。',
+                '开奥迪的人开白色车。',
+                '开特斯拉的人开电动车。',
+                '中间位置的人开 5 座车。',
+                '开丰田的人开蓝色车。',
+                '开混合动力车的人养狗。',
+                '开 7 座车的人养猫。',
+                '养鸟的人开 2 座车。',
+                '开奔驰的人住在开特斯拉的人旁边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                brand: { label: '品牌', values: ['奔驰','宝马','奥迪','特斯拉','丰田'] },
+                color: { label: '颜色', values: ['红色','黑色','白色','蓝色','银色'] },
+                fuel:  { label: '能源', values: ['汽油','柴油','电动','混合','氢能'] },
+                seat:  { label: '座位', values: ['2座','4座','5座','7座','9座'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] }
+            },
+            answer: [
+                { brand:'奥迪',   color:'白色', fuel:'电动', seat:'2座', pet:'鸟' },
+                { brand:'宝马',   color:'黑色', fuel:'混合', seat:'7座', pet:'猫' },
+                { brand:'丰田',   color:'蓝色', fuel:'汽油', seat:'5座', pet:'鱼' },
+                { brand:'奔驰',   color:'红色', fuel:'柴油', seat:'4座', pet:'狗' },
+                { brand:'特斯拉', color:'银色', fuel:'氢能', seat:'9座', pet:'兔子' }
+            ],
+            target: { house: 2, key: 'brand', value: '丰田' }
+        },
+
+        // 10. 五杯咖啡
+        {
+            title: '五杯咖啡',
+            intro: '5 个人在咖啡馆点了不同咖啡、加了不同配料、坐在不同位置、看不同书、穿不同颜色衣服。',
+            clues: [
+                '穿红衣服的人点浓缩咖啡。',
+                '穿蓝衣服的人加牛奶。',
+                '穿绿衣服的人看小说。',
+                '中间位置的人点卡布奇诺。',
+                '穿黄衣服的人点美式。',
+                '穿白衣服的人坐在穿绿衣服的右边。',
+                '看杂志的人加糖。',
+                '看报纸的人点摩卡。',
+                '加奶泡的人坐在加糖的人旁边。',
+                '喝拿铁的人坐在第一位。'
+            ],
+            question: '谁看诗集？',
+            categories: {
+                color:  { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
+                coffee: { label: '咖啡', values: ['浓缩','拿铁','卡布奇诺','美式','摩卡'] },
+                extra:  { label: '配料', values: ['牛奶','糖','奶泡','肉桂','可可'] },
+                book:   { label: '书籍', values: ['小说','杂志','报纸','诗集','漫画'] }
+            },
+            answer: [
+                { color:'蓝色', coffee:'拿铁',     extra:'牛奶', book:'杂志' },
+                { color:'白色', coffee:'摩卡',     extra:'可可', book:'报纸' },
+                { color:'红色', coffee:'卡布奇诺', extra:'肉桂', book:'小说' },
+                { color:'绿色', coffee:'浓缩',     extra:'糖',   book:'诗集' },
+                { color:'黄色', coffee:'美式',     extra:'奶泡', book:'漫画' }
+            ],
+            target: { house: 3, key: 'color', value: '绿色' }
+        }
+    ];
+
+    // ============================================================
+    // 状态
+    // ============================================================
+    let currentIndex = 0;
+    let state = [];        // [{cat1: val, cat2: val, ...}, ...] 5 个
+    let revealed = [];     // [{cat: true, ...}, ...]
     let hintCount = 0;
 
+    const problemEl = document.getElementById('problem');
     const wrap = document.getElementById('tableWrap');
     const resultEl = document.getElementById('result');
+    const idxLabel = document.getElementById('idxLabel');
+    const totalLabel = document.getElementById('totalLabel');
+    const titleLabel = document.getElementById('titleLabel');
 
-    function init() {
-        state = Array.from({ length: 5 }, () => ({ nationality:'', color:'', drink:'', smoke:'', pet:'' }));
+    const current = () => PUZZLES[currentIndex];
+
+    // ============================================================
+    // 初始化 / 切换题目
+    // ============================================================
+    function loadPuzzle(index) {
+        currentIndex = ((index % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
+        const p = current();
+
+        // 重置状态
+        state = Array.from({ length: 5 }, () => {
+            const obj = {};
+            for (const k of Object.keys(p.categories)) obj[k] = '';
+            return obj;
+        });
         revealed = Array.from({ length: 5 }, () => ({}));
         hintCount = 0;
         resultEl.textContent = '';
-        render();
+        resultEl.className = 'zebra-result';
+
+        idxLabel.textContent = currentIndex + 1;
+        totalLabel.textContent = PUZZLES.length;
+        titleLabel.textContent = p.title;
+
+        renderProblem();
+        renderTable();
     }
 
-    function render() {
-        let html = '<table class="zebra-table"><thead><tr><th>房子</th>';
-        for (const k of Object.keys(CATEGORIES)) html += `<th>${LABELS[k]}</th>`;
+    // ============================================================
+    // 渲染题目与线索
+    // ============================================================
+    function renderProblem() {
+        const p = current();
+        let html = `<b>题目：</b>${p.intro}<br><b>线索：</b><br>`;
+        p.clues.forEach((c, i) => {
+            html += `${i + 1}. ${c}<br>`;
+        });
+        html += `<span class="q">问题：${p.question}</span>`;
+        problemEl.innerHTML = html;
+    }
+
+    // ============================================================
+    // 渲染表格
+    // ============================================================
+    function renderTable() {
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        let html = '<table class="zebra-table"><thead><tr><th style="width:80px;">房子</th>';
+        for (const k of cats) html += `<th>${p.categories[k].label}</th>`;
         html += '</tr></thead><tbody>';
 
         for (let i = 0; i < 5; i++) {
             html += `<tr><td><b>第 ${i + 1} 栋</b></td>`;
-            for (const k of Object.keys(CATEGORIES)) {
+            for (const k of cats) {
                 const locked = revealed[i][k];
                 html += `<td class="${locked ? 'correct' : ''}">`;
                 html += `<select data-house="${i}" data-cat="${k}" ${locked ? 'disabled' : ''}>`;
                 html += `<option value="">--</option>`;
-                for (const opt of CATEGORIES[k]) {
+                for (const opt of p.categories[k].values) {
                     const sel = state[i][k] === opt ? ' selected' : '';
                     html += `<option value="${opt}"${sel}>${opt}</option>`;
                 }
-                html += '</select></td>';
+                html += `</select></td>`;
             }
             html += '</tr>';
         }
@@ -143,63 +556,107 @@
         });
     }
 
+    // ============================================================
+    // 检查
+    // ============================================================
     function check() {
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        // 1. 是否填满
         for (let i = 0; i < 5; i++) {
-            for (const k of Object.keys(CATEGORIES)) {
+            for (const k of cats) {
                 if (!state[i][k]) {
+                    resultEl.className = 'zebra-result warn';
                     resultEl.textContent = '⚠️ 还有格子未填写';
                     return;
                 }
             }
         }
-        for (const k of Object.keys(CATEGORIES)) {
+        // 2. 每列不重复
+        for (const k of cats) {
             const vals = state.map(s => s[k]);
             if (new Set(vals).size !== 5) {
-                resultEl.textContent = `⚠️ 「${LABELS[k]}」列有重复`;
+                resultEl.className = 'zebra-result warn';
+                resultEl.textContent = `⚠️ 「${p.categories[k].label}」列有重复`;
                 return;
             }
         }
+        // 3. 全对？
         let allCorrect = true;
         for (let i = 0; i < 5; i++) {
-            for (const k of Object.keys(CATEGORIES)) {
-                if (state[i][k] !== CORRECT[i][k]) allCorrect = false;
+            for (const k of cats) {
+                if (state[i][k] !== p.answer[i][k]) allCorrect = false;
             }
         }
-        resultEl.textContent = allCorrect
-            ? '🎉 完全正确！养鱼的是德国人。'
-            : '❌ 答案有误，请再想想。';
+        if (allCorrect) {
+            resultEl.className = 'zebra-result';
+            const t = p.target;
+            resultEl.textContent = `🎉 完全正确！${p.categories[t.key].label}为「${t.value}」的是第 ${t.house + 1} 栋。`;
+        } else {
+            resultEl.className = 'zebra-result error';
+            resultEl.textContent = '❌ 答案有误，请再想想。';
+        }
     }
 
+    // ============================================================
+    // 提示
+    // ============================================================
     function hint() {
         if (hintCount >= MAX_HINTS) {
-            resultEl.textContent = `⚠️ 提示次数已用完（${MAX_HINTS} 次）`;
+            resultEl.className = 'zebra-result warn';
+            resultEl.textContent = `⚠️ 本题提示次数已用完（${MAX_HINTS} 次）`;
             return;
         }
+        const p = current();
+        const cats = Object.keys(p.categories);
+
         const empty = [];
         for (let i = 0; i < 5; i++) {
-            for (const k of Object.keys(CATEGORIES)) {
-                if (state[i][k] !== CORRECT[i][k]) {
-                    empty.push({ house: i, cat: k });
-                }
+            for (const k of cats) {
+                if (state[i][k] !== p.answer[i][k]) empty.push({ house: i, cat: k });
             }
         }
         if (empty.length === 0) {
+            resultEl.className = 'zebra-result';
             resultEl.textContent = '已经全部正确，无需提示。';
             return;
         }
         const slot = empty[Math.floor(Math.random() * empty.length)];
-        state[slot.house][slot.cat] = CORRECT[slot.house][slot.cat];
+        state[slot.house][slot.cat] = p.answer[slot.house][slot.cat];
         revealed[slot.house][slot.cat] = true;
         hintCount++;
-        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${LABELS[slot.cat]}」（剩余提示 ${MAX_HINTS - hintCount} 次）`;
-        render();
+        resultEl.className = 'zebra-result';
+        resultEl.textContent = `💡 已揭示：第 ${slot.house + 1} 栋的「${p.categories[slot.cat].label}」（剩余提示 ${MAX_HINTS - hintCount} 次）`;
+        renderTable();
     }
 
+    // ============================================================
+    // 按钮
+    // ============================================================
     document.getElementById('btnCheck').onclick = check;
     document.getElementById('btnHint').onclick = hint;
-    document.getElementById('btnReset').onclick = init;
+    document.getElementById('btnReset').onclick = () => loadPuzzle(currentIndex);
+    document.getElementById('btnPrev').onclick = () => loadPuzzle(currentIndex - 1);
+    document.getElementById('btnNext').onclick = () => loadPuzzle(currentIndex + 1);
+    document.getElementById('btnRandom').onclick = () => {
+        if (PUZZLES.length <= 1) return;
+        let next;
+        do { next = Math.floor(Math.random() * PUZZLES.length); }
+        while (next === currentIndex);
+        loadPuzzle(next);
+    };
 
-    init();
+    // 键盘快捷键：← / → 切题
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') loadPuzzle(currentIndex - 1);
+        else if (e.key === 'ArrowRight') loadPuzzle(currentIndex + 1);
+    });
+
+    // ============================================================
+    // 启动
+    // ============================================================
+    loadPuzzle(0);
     GameBridge.notifyReady();
 })();
 </script>
