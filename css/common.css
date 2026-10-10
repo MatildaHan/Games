@@ -48,16 +48,18 @@ body {
     isolation: isolate;
 }
 
-body::before {
+/* 关键修复 3：背景图只在父页面加载，iframe 内不加载 */
+body:not(.embedded)::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2560&auto=format&fit=crop') no-repeat center center;
+    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
     background-size: cover;
     pointer-events: none;
 }
 
+/* iframe 内页面：透明背景、无内边距、无伪元素 */
 body.embedded {
     background: transparent;
     padding: 0;
@@ -88,8 +90,8 @@ body.embedded::before { display: none; }
     grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
     gap: 8px;
     background: var(--bg-glass);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     padding: 12px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
@@ -106,7 +108,7 @@ body.embedded::before { display: none; }
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.15s, color 0.15s;
     min-height: 44px;
     display: flex;
     align-items: center;
@@ -119,7 +121,7 @@ body.embedded::before { display: none; }
 .nav-btn.active {
     background: var(--primary);
     color: #000;
-    box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+    box-shadow: 0 0 16px rgba(74, 222, 128, 0.35);
 }
 .nav-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
@@ -128,8 +130,8 @@ body.embedded::before { display: none; }
    ============================================================ */
 .game-content {
     background: var(--bg-glass);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius);
     border: 1px solid var(--border);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -150,6 +152,7 @@ body.embedded::before { display: none; }
 
 /* ============================================================
    iframe 内部通用布局
+   关键修复 2：去掉 backdrop-filter（GPU 重负载）
    ============================================================ */
 .game-inner {
     width: 100%;
@@ -159,8 +162,7 @@ body.embedded::before { display: none; }
     align-items: flex-start;
     padding: 16px;
     background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    /* 已删除 backdrop-filter */
     color: var(--text);
     overflow-y: auto;
     overflow-x: auto;
@@ -179,7 +181,7 @@ body.embedded::before { display: none; }
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s;
     font-family: inherit;
     min-height: 44px;
     min-width: 44px;
@@ -208,20 +210,19 @@ body.embedded::before { display: none; }
 .card-value { font-size: 22px; font-weight: 700; color: var(--primary); }
 
 /* ============================================================
-   模态弹窗
+   模态弹窗（去掉 backdrop-filter）
    ============================================================ */
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.8);
+    /* 已删除 backdrop-filter */
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 100;
     padding: 20px;
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn 0.15s ease;
 }
 .modal.show { display: flex; }
 .modal-box {
@@ -241,8 +242,8 @@ body.embedded::before { display: none; }
 .modal-actions .btn { flex: 1; }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.98); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* ============================================================
@@ -271,7 +272,7 @@ body.embedded::before { display: none; }
     font-weight: 600;
     min-width: 180px;
     text-align: center;
-    animation: toastIn 0.25s ease;
+    animation: toastIn 0.2s ease;
     pointer-events: auto;
 }
 .toast.success { border-color: var(--primary); color: var(--primary); }
@@ -284,7 +285,7 @@ body.embedded::before { display: none; }
 }
 
 /* ============================================================
-   响应式：平板 (768 - 1023)
+   响应式：平板
    ============================================================ */
 @media (max-width: 1023px) {
     .game-nav {
@@ -294,7 +295,7 @@ body.embedded::before { display: none; }
 }
 
 /* ============================================================
-   响应式：手机 (≤ 767px)
+   响应式：手机
    ============================================================ */
 @media (max-width: 767px) {
     body {
@@ -356,27 +357,12 @@ body.embedded::before { display: none; }
     .card-value { font-size: 20px; }
 }
 
-/* ============================================================
-   响应式：超小屏手机 (≤ 380px)
-   ============================================================ */
 @media (max-width: 380px) {
-    .nav-btn {
-        font-size: 10px;
-        min-height: 30px;
-        padding: 4px 2px;
-    }
-    .game-nav {
-        padding: 4px;
-        gap: 3px;
-    }
-    .game-inner {
-        padding: 6px;
-    }
+    .nav-btn { font-size: 10px; min-height: 30px; padding: 4px 2px; }
+    .game-nav { padding: 4px; gap: 3px; }
+    .game-inner { padding: 6px; }
 }
 
-/* ============================================================
-   横屏手机
-   ============================================================ */
 @media (max-width: 900px) and (orientation: landscape) {
     body {
         padding: calc(6px + var(--safe-top)) 10px calc(6px + var(--safe-bottom));
@@ -388,11 +374,7 @@ body.embedded::before { display: none; }
     }
     body.embedded { padding: 0; }
 
-    .container {
-        flex: 1;
-        min-height: 0;
-        gap: 6px;
-    }
+    .container { flex: 1; min-height: 0; gap: 6px; }
 
     .game-nav {
         grid-template-columns: repeat(9, 1fr);
