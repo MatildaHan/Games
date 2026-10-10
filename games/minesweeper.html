@@ -10,9 +10,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     justify-content: center;
 }
 .mine-info {
@@ -57,7 +57,9 @@
 .mine-cell:hover { background: rgba(255,255,255,0.2); }
 .mine-cell.revealed { background: rgba(0,0,0,0.3); cursor: default; }
 .mine-cell.mine { background: var(--danger); color: #fff; }
+.mine-cell.mine-revealed { background: rgba(239,68,68,0.5); color: #fff; }
 .mine-cell.flag { background: #fbbf24; color: #000; }
+.mine-cell.wrong-flag { background: rgba(239,68,68,0.6); color: #fff; }
 .mine-cell.n1 { color: #60a5fa; } .mine-cell.n2 { color: #4ade80; }
 .mine-cell.n3 { color: #f87171; } .mine-cell.n4 { color: #a78bfa; }
 .mine-cell.n5 { color: #fb923c; } .mine-cell.n6 { color: #22d3ee; }
@@ -65,7 +67,6 @@
 
 .mine-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
-/* 手机切换模式按钮：左键 / 旗子 */
 .mode-toggle {
     display: none;
     gap: 8px;
@@ -87,7 +88,6 @@
 }
 .mode-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
 
-/* ---------- 手机 ---------- */
 @media (max-width: 767px) {
     .mine-info { font-size: 12px; gap: 10px; }
     .mode-toggle { display: flex; }
@@ -104,7 +104,6 @@
             <span>难度 <b id="lvEl">—</b></span>
         </div>
 
-        <!-- 手机模式切换 -->
         <div class="mode-toggle" id="modeToggle">
             <button class="mode-btn active" data-mode="dig">⛏ 挖掘</button>
             <button class="mode-btn" data-mode="flag">🚩 插旗</button>
@@ -136,22 +135,19 @@
     let rows, cols, mines;
     let grid, revealed, flagged;
     let gameOver, started, seconds, timer;
-    let touchMode = 'dig';   // 'dig' | 'flag'
+    let touchMode = 'dig';
 
     const gridEl = document.getElementById('grid');
-    const gridWrap = gridEl.parentElement;
     const mineLeftEl = document.getElementById('mineLeft');
     const timeEl = document.getElementById('timeEl');
     const lvEl = document.getElementById('lvEl');
     const modeToggle = document.getElementById('modeToggle');
 
-    // 判断是否触摸设备
     const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
     function calcCellSize() {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        // 手机端限制宽度
         const availW = Math.min(vw - 60, 900);
         const availH = vh * 0.55;
         const byW = Math.floor((availW - cols * 2) / cols);
@@ -160,6 +156,9 @@
         return Math.max(18, size);
     }
 
+    // ============================================================
+    // 初始化：创建所有单元格 DOM，之后原地更新
+    // ============================================================
     function init() {
         const lv = LEVELS[levelIdx];
         rows = lv.rows; cols = lv.cols; mines = lv.mines;
@@ -174,11 +173,49 @@
         mineLeftEl.textContent = mines;
         lvEl.textContent = lv.name;
 
-        // 手机上对专业难度给个提示
-        if (isTouch && cols > 20) {
-            // 自动缩小格子
+        // 一次性创建所有 cell 元素
+        const cell = calcCellSize();
+        gridEl.style.setProperty('--cell', cell + 'px');
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+        gridEl.innerHTML = '';
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                const el = document.createElement('div');
+                el.className = 'mine-cell';
+                el.dataset.x = x;
+                el.dataset.y = y;
+                gridEl.appendChild(el);
+            }
         }
-        render();
+        // 全量刷新视觉
+        refreshAll();
+    }
+
+    function refreshAll() {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                updateCellVisual(x, y);
+            }
+        }
+    }
+
+    function updateCellVisual(x, y) {
+        const el = gridEl.children[y * cols + x];
+        el.className = 'mine-cell';
+        el.textContent = '';
+        if (revealed[y][x]) {
+            el.classList.add('revealed');
+            if (grid[y][x] === -1) {
+                el.classList.add('mine');
+                el.textContent = '💣';
+            } else if (grid[y][x] > 0) {
+                el.textContent = grid[y][x];
+                el.classList.add('n' + grid[y][x]);
+            }
+        } else if (flagged[y][x]) {
+            el.classList.add('flag');
+            el.textContent = '🚩';
+        }
     }
 
     function placeMines(sx, sy) {
@@ -206,82 +243,64 @@
         }
     }
 
-    function render() {
-        const cell = calcCellSize();
-        gridEl.style.setProperty('--cell', cell + 'px');
-        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+    // ============================================================
+    // 交互：事件委托 + 长按兼容
+    // ============================================================
+    let longPressTimer = null;
+    let longPressHandled = false;
+    let touchStartPos = null;
 
-        gridEl.innerHTML = '';
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
-                const cellEl = document.createElement('div');
-                cellEl.className = 'mine-cell';
-                cellEl.dataset.x = x;
-                cellEl.dataset.y = y;
-                if (revealed[y][x]) {
-                    cellEl.classList.add('revealed');
-                    if (grid[y][x] === -1) {
-                        cellEl.classList.add('mine');
-                        cellEl.textContent = '💣';
-                    } else if (grid[y][x] > 0) {
-                        cellEl.textContent = grid[y][x];
-                        cellEl.classList.add('n' + grid[y][x]);
-                    }
-                } else if (flagged[y][x]) {
-                    cellEl.classList.add('flag');
-                    cellEl.textContent = '🚩';
-                }
-                gridEl.appendChild(cellEl);
-            }
-        }
-    }
-
-    // 事件委托
     gridEl.addEventListener('click', e => {
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
+        const el = e.target.closest('.mine-cell');
+        if (!el) return;
+        if (longPressHandled) {
+            longPressHandled = false;
+            return;
+        }
+        const x = +el.dataset.x, y = +el.dataset.y;
         if (touchMode === 'flag' && isTouch) rightClick(x, y);
         else leftClick(x, y);
     });
 
     gridEl.addEventListener('contextmenu', e => {
         e.preventDefault();
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
+        if (longPressHandled) {
+            longPressHandled = false;
+            return;
+        }
+        const el = e.target.closest('.mine-cell');
+        if (!el) return;
+        const x = +el.dataset.x, y = +el.dataset.y;
         rightClick(x, y);
     });
 
-    // 长按 = 插旗（触屏）
-    let longPressTimer = null;
-    let longPressHandled = false;
     gridEl.addEventListener('touchstart', e => {
-        const cell = e.target.closest('.mine-cell');
-        if (!cell) return;
+        const el = e.target.closest('.mine-cell');
+        if (!el) return;
+        const t = e.touches[0];
+        touchStartPos = { x: t.clientX, y: t.clientY };
         longPressHandled = false;
-        const x = +cell.dataset.x, y = +cell.dataset.y;
+        const x = +el.dataset.x, y = +el.dataset.y;
         longPressTimer = setTimeout(() => {
             longPressHandled = true;
             rightClick(x, y);
-        }, 450);
+        }, 500);
     }, { passive: true });
 
-    gridEl.addEventListener('touchend', e => {
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
+    gridEl.addEventListener('touchmove', e => {
+        if (!touchStartPos) return;
+        const t = e.touches[0];
+        const dx = Math.abs(t.clientX - touchStartPos.x);
+        const dy = Math.abs(t.clientY - touchStartPos.y);
+        if (dx > 8 || dy > 8) {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
         }
-        if (longPressHandled) {
-            // 阻止 click 触发
-            e.preventDefault();
-            longPressHandled = false;
-        }
-    });
+    }, { passive: true });
 
-    gridEl.addEventListener('touchmove', () => {
+    gridEl.addEventListener('touchend', () => {
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-    }, { passive: true });
+        touchStartPos = null;
+    });
 
     function leftClick(x, y) {
         if (gameOver || revealed[y][x] || flagged[y][x]) return;
@@ -294,12 +313,12 @@
             gameOver = true;
             revealed[y][x] = true;
             clearInterval(timer);
-            render();
+            revealAllMines();
             setTimeout(() => alert('💥 踩雷了！'), 100);
             return;
         }
         floodReveal(x, y);
-        render();
+        refreshAll();
         checkWin();
     }
 
@@ -319,13 +338,35 @@
         }
     }
 
+    function revealAllMines() {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                if (grid[y][x] === -1 && !flagged[y][x]) {
+                    revealed[y][x] = true;
+                }
+                // 把错误的旗子标出来
+                if (flagged[y][x] && grid[y][x] !== -1) {
+                    // 错误的旗子
+                    const el = gridEl.children[y * cols + x];
+                    el.className = 'mine-cell wrong-flag';
+                    el.textContent = '❌';
+                }
+            }
+        }
+        // 保留被踩的雷
+        refreshAll();
+        // 再覆盖踩雷格为红色
+        // (refreshAll 会重置视觉，所以再手动设一次)
+        // 该格已在 revealed 里标记，refreshAll 会显示为 mine
+    }
+
     function rightClick(x, y) {
         if (gameOver || revealed[y][x]) return;
         flagged[y][x] = !flagged[y][x];
         let cnt = 0;
         for (let yy = 0; yy < rows; yy++) for (let xx = 0; xx < cols; xx++) if (flagged[yy][xx]) cnt++;
         mineLeftEl.textContent = mines - cnt;
-        render();
+        updateCellVisual(x, y);
         checkWin();
     }
 
@@ -338,7 +379,6 @@
         setTimeout(() => alert(`🎉 恭喜通关！用时 ${seconds} 秒`), 100);
     }
 
-    // 手机模式切换
     modeToggle.addEventListener('click', e => {
         const btn = e.target.closest('.mode-btn');
         if (!btn) return;
@@ -354,11 +394,14 @@
         init();
     };
 
-    // 窗口大小变化时重绘
     let resizeTimer = null;
     window.addEventListener('resize', () => {
         if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(render, 200);
+        resizeTimer = setTimeout(() => {
+            const cell = calcCellSize();
+            gridEl.style.setProperty('--cell', cell + 'px');
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+        }, 200);
     });
 
     init();
