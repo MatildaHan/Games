@@ -15,81 +15,294 @@
     width: 100%;
 }
 .chess-board-wrap { display: flex; justify-content: center; align-items: center; }
+
+/* ============================================================
+   棋盘：真实象棋纸质感
+   ============================================================ */
 .chess-board {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(9, var(--cell, 52px));
     grid-template-rows: repeat(10, var(--cell, 52px));
-    background: #e8d8b0;
-    border: 2px solid #7a5a3a;
-    border-radius: 4px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    position: relative;
+    /* 用木质外框 + 米黄棋盘纸 */
+    background:
+        /* 棋盘纸的内阴影，让纸看起来有厚度 */
+        radial-gradient(ellipse at center, rgba(255,255,255,0.35) 0%, rgba(0,0,0,0) 70%),
+        /* 米黄主色，带一点渐变，模拟宣纸 */
+        linear-gradient(135deg, #f3e2b6 0%, #ecd9a4 40%, #e6cd8f 100%);
+    padding: 0;
+    border: 10px solid #6b4423; /* 木框 */
+    border-radius: 6px;
+    box-shadow:
+        inset 0 0 0 2px #3a2412,   /* 内描边，木质沟槽 */
+        inset 0 0 0 3px #c9a86a,   /* 内侧金色描线 */
+        inset 0 0 40px rgba(80, 40, 10, 0.25), /* 纸张暗角 */
+        0 10px 30px rgba(0,0,0,0.6),
+        0 2px 6px rgba(0,0,0,0.4);
+    /* 木框纹理 */
+    background-clip: padding-box;
     touch-action: manipulation;
+    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
 }
+
+/* 木框纹理（用伪元素盖在 border 上） */
 .chess-board::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(to right, rgba(0,0,0,0.35) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0,0,0,0.35) 1px, transparent 1px);
-    background-size: var(--cell) var(--cell);
-    background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);
+    inset: -10px;
+    border-radius: 6px;
+    background:
+        repeating-linear-gradient(
+            92deg,
+            rgba(0,0,0,0.08) 0px,
+            rgba(0,0,0,0.08) 1px,
+            transparent 1px,
+            transparent 3px
+        ),
+        linear-gradient(180deg, #7a4e26 0%, #5c3818 50%, #6b4423 100%);
+    z-index: -1;
     pointer-events: none;
 }
+
+/* 棋盘线条（格线、九宫斜线、楚河汉界） */
 .chess-board::after {
-    content: '楚 河            汉 界';
+    content: '';
     position: absolute;
-    left: 0; right: 0;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    /* 横线：10 条（每个交叉点所在位置的中心） */
+    background-image:
+        /* 棋盘格线（竖线 9 条、横线 10 条） */
+        linear-gradient(to right, #4a2c14 1px, transparent 1px),
+        linear-gradient(to bottom, #4a2c14 1px, transparent 1px);
+    background-size:
+        var(--cell) var(--cell),
+        var(--cell) var(--cell);
+    background-position:
+        calc(var(--cell) / 2) 0,
+        0 calc(var(--cell) / 2);
+    /* 用 mask 只保留棋盘有效区域（外框内 + 上下各半格） */
+    /* 简化：不裁剪，靠 border 隐藏溢出 */
+    opacity: 0.85;
+}
+
+/* 楚河汉界文字 */
+.chess-river {
+    position: absolute;
+    left: 0;
+    right: 0;
     top: calc(var(--cell) * 4.5);
     height: var(--cell);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12%;
+    padding: 0 16%;
     font-family: "KaiTi", "STKaiti", serif;
-    font-size: calc(var(--cell) * 0.4);
-    color: rgba(80, 50, 20, 0.7);
-    letter-spacing: 4px;
+    font-size: calc(var(--cell) * 0.55);
+    color: #2c1a0a;
+    letter-spacing: 6px;
     pointer-events: none;
     user-select: none;
+    z-index: 1;
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
 }
+
+/* 九宫斜线：用两个绝对定位的 SVG 覆盖在九宫区域 */
+.chess-palace {
+    position: absolute;
+    width: calc(var(--cell) * 3);
+    height: calc(var(--cell) * 3);
+    pointer-events: none;
+    z-index: 1;
+}
+.chess-palace.top { top: 0; left: calc(var(--cell) * 3); }
+.chess-palace.bottom { bottom: 0; left: calc(var(--cell) * 3); }
+.chess-palace svg { width: 100%; height: 100%; display: block; }
+.chess-palace line {
+    stroke: #4a2c14;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.85;
+}
+
+/* 炮/兵位置标记（十字小刻线） */
+.chess-marker {
+    position: absolute;
+    width: calc(var(--cell) * 0.55);
+    height: calc(var(--cell) * 0.55);
+    pointer-events: none;
+    z-index: 1;
+}
+.chess-marker::before,
+.chess-marker::after {
+    content: '';
+    position: absolute;
+    background: #4a2c14;
+    opacity: 0.75;
+}
+.chess-marker::before {
+    /* 竖线 */
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+}
+.chess-marker::after {
+    /* 横线 */
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+}
+/* 用 clip-path 挖去中间，形成 4 个 L 形小角 */
+.chess-marker {
+    --half: calc(var(--cell) * 0.28);
+    -webkit-mask-image:
+        linear-gradient(#000, #000),
+        radial-gradient(circle, transparent 40%, #000 41%);
+    -webkit-mask-composite: source-over;
+}
+
+/* ============================================================
+   棋子
+   ============================================================ */
 .chess-cell {
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: calc(var(--cell, 52px) * 0.58);
-    font-weight: 700;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
-    color: #333;
-    position: relative;
-    font-family: "KaiTi", "STKaiti", serif;
-    z-index: 1;
+    z-index: 3;
 }
-.chess-cell.red { color: #c0392b; }
-.chess-cell.black { color: #2c3e50; }
-.chess-cell.selected {
-    background: rgba(74,222,128,0.5);
+
+/* 棋子实体 */
+.chess-piece {
+    width: calc(var(--cell, 52px) * 0.86);
+    height: calc(var(--cell, 52px) * 0.86);
     border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
+    font-weight: 700;
+    font-size: calc(var(--cell, 52px) * 0.46);
+    line-height: 1;
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    /* 圆盘立体感：外深内浅 */
+    background:
+        radial-gradient(circle at 35% 30%, #ffffff 0%, #f5efd8 30%, #e8d9a8 65%, #cbb177 100%);
+    box-shadow:
+        /* 外阴影（浮起） */
+        0 3px 6px rgba(0,0,0,0.4),
+        0 1px 2px rgba(0,0,0,0.3),
+        /* 内侧凹边 */
+        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
+        inset 0 2px 3px rgba(255, 255, 255, 0.9),
+        /* 外圈金属亮边 */
+        inset 0 0 0 2px #b89464,
+        inset 0 0 0 3px #8a6a3c;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
 }
+
+/* 棋子内圈线条（像一个圆环） */
+.chess-piece::before {
+    content: '';
+    position: absolute;
+    inset: 14%;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* 红方棋子：红木质感 */
+.chess-cell.red .chess-piece {
+    color: #a01e1e;
+    background:
+        radial-gradient(circle at 35% 30%, #fdf6e3 0%, #f7ecc9 35%, #efdca4 70%, #d9b877 100%);
+    box-shadow:
+        0 3px 6px rgba(0,0,0,0.4),
+        0 1px 2px rgba(0,0,0,0.3),
+        inset 0 -3px 4px rgba(160, 90, 30, 0.35),
+        inset 0 2px 3px rgba(255, 255, 255, 0.9),
+        inset 0 0 0 2px #c08040,
+        inset 0 0 0 3px #8a2020;
+}
+
+/* 黑方棋子：深木/黑檀质感 */
+.chess-cell.black .chess-piece {
+    color: #1a1a1a;
+    background:
+        radial-gradient(circle at 35% 30%, #f5ebd0 0%, #ecdcb0 35%, #d9c088 70%, #b89a60 100%);
+    box-shadow:
+        0 3px 6px rgba(0,0,0,0.4),
+        0 1px 2px rgba(0,0,0,0.3),
+        inset 0 -3px 4px rgba(60, 40, 20, 0.45),
+        inset 0 2px 3px rgba(255, 255, 255, 0.85),
+        inset 0 0 0 2px #a08050,
+        inset 0 0 0 3px #2a2a2a;
+}
+
+/* 选中：金色光环 */
+.chess-cell.selected .chess-piece {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow:
+        0 5px 10px rgba(0,0,0,0.5),
+        0 2px 4px rgba(0,0,0,0.35),
+        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
+        inset 0 2px 3px rgba(255, 255, 255, 0.9),
+        inset 0 0 0 2px #d4af37,
+        inset 0 0 0 3px #b89464,
+        0 0 0 3px rgba(212, 175, 55, 0.7);
+}
+
+/* 可走位置：绿色圆环 */
 .chess-cell.valid::after {
     content: '';
     position: absolute;
-    width: calc(var(--cell, 52px) * 0.3);
-    height: calc(var(--cell, 52px) * 0.3);
+    width: calc(var(--cell, 52px) * 0.32);
+    height: calc(var(--cell, 52px) * 0.32);
     border-radius: 50%;
-    border: 3px solid rgba(74,222,128,0.9);
+    border: 3px solid rgba(46, 160, 67, 0.85);
+    box-shadow: 0 0 8px rgba(46, 160, 67, 0.6), inset 0 0 4px rgba(46, 160, 67, 0.5);
     background: transparent;
     pointer-events: none;
+    z-index: 4;
+    animation: validPulse 1.2s ease-in-out infinite;
 }
-.chess-cell.lastmove {
-    background: rgba(250,204,21,0.35);
-    border-radius: 50%;
+@keyframes validPulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.15); opacity: 1; }
 }
 
+/* 上一步：琥珀色光晕 */
+.chess-cell.lastmove .chess-piece {
+    box-shadow:
+        0 3px 6px rgba(0,0,0,0.4),
+        0 1px 2px rgba(0,0,0,0.3),
+        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
+        inset 0 2px 3px rgba(255, 255, 255, 0.9),
+        inset 0 0 0 2px #d4af37,
+        inset 0 0 0 3px #b89464,
+        0 0 0 3px rgba(255, 200, 60, 0.8);
+}
+
+/* 小屏幕：棋子字体略小 */
+@media (max-width: 767px) {
+    .chess-board { border-width: 6px; }
+    .chess-board::before { inset: -6px; }
+}
+
+/* ============================================================
+   侧栏
+   ============================================================ */
 .chess-side { display: flex; flex-direction: column; gap: 10px; }
 .chess-side .card { font-size: 13px; }
 .chess-side .card b { color: var(--primary); }
@@ -134,7 +347,23 @@
 <div class="game-inner">
     <div class="chess-layout">
         <div class="chess-board-wrap">
-            <div id="board" class="chess-board"></div>
+            <div id="board" class="chess-board">
+                <!-- 楚河汉界 -->
+                <div class="chess-river">楚 河　　　　　汉 界</div>
+                <!-- 九宫斜线 -->
+                <div class="chess-palace top">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <line x1="0" y1="0" x2="100" y2="100" />
+                        <line x1="100" y1="0" x2="0" y2="100" />
+                    </svg>
+                </div>
+                <div class="chess-palace bottom">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <line x1="0" y1="0" x2="100" y2="100" />
+                        <line x1="100" y1="0" x2="0" y2="100" />
+                    </svg>
+                </div>
+            </div>
         </div>
         <div class="chess-side">
             <div class="card">
@@ -161,7 +390,6 @@
     </div>
 </div>
 
-<!-- 结束弹窗 -->
 <div class="modal" id="endModal">
     <div class="modal-box">
         <h2 id="endModalTitle">对局结束</h2>
@@ -219,25 +447,33 @@
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
     // ============================================================
-    // 棋盘尺寸
+    // 棋盘尺寸：按可用空间动态计算
     // ============================================================
     function calcCellSize() {
-        const vw = window.innerWidth;
+        const wrap = document.querySelector('.chess-board-wrap');
+        const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const availW = Math.min(vw - 60, 560);
-        const availH = vh - 220;
-        const byW = Math.floor((availW - 10) / 9);
-        const byH = Math.floor((availH - 10) / 10);
-        return Math.max(26, Math.min(byW, byH, 52));
+        // 棋盘 9 列 × 10 行，宽高比 9:10；木框 10px * 2
+        const frame = 20;
+        const availW = vw - frame - 4;
+        const availH = vh - 240; // 顶部 + 侧栏/按钮预留
+        const byW = Math.floor(availW / 9);
+        const byH = Math.floor(availH / 10);
+        return Math.max(24, Math.min(byW, byH, 56));
     }
 
     // ============================================================
-    // 渲染：DOM 复用
+    // 构建棋盘 DOM（棋子用 .chess-piece 包裹，便于做圆形立体）
     // ============================================================
-    let cellEls = null; // 90 个 cell 的引用
+    let cellEls = null;
 
     function buildBoardDOM() {
+        // 保留已有的装饰元素（楚河汉界、九宫斜线），只清棋子层
+        const decorations = Array.from(boardEl.children);
         boardEl.innerHTML = '';
+        // 重新加回装饰
+        decorations.forEach(d => boardEl.appendChild(d));
+
         cellEls = new Array(90);
         for (let y = 0; y < 10; y++) {
             for (let x = 0; x < 9; x++) {
@@ -263,9 +499,12 @@
                 const el = cellEls[y * 9 + x];
                 const p = board[y][x];
                 el.className = 'chess-cell';
-                el.textContent = '';
+                el.innerHTML = '';
                 if (p) {
-                    el.textContent = NAMES[p];
+                    const piece = document.createElement('div');
+                    piece.className = 'chess-piece';
+                    piece.textContent = NAMES[p];
+                    el.appendChild(piece);
                     el.classList.add(isRed(p) ? 'red' : 'black');
                 }
                 if (selected && selected.x === x && selected.y === y) el.classList.add('selected');
@@ -376,7 +615,7 @@
     }
 
     // ============================================================
-    // 快速 isInCheck：只从将/帅位置向 4 个方向扫描
+    // 快速 isInCheck
     // ============================================================
     function findKing(side) {
         const target = side === 'red' ? 'K' : 'k';
@@ -386,7 +625,6 @@
         return null;
     }
 
-    // 将帅对面
     function kingsFacing() {
         const kr = findKing('red'), kb = findKing('black');
         if (!kr || !kb) return false;
@@ -397,20 +635,15 @@
         return true;
     }
 
-    // 快速检查：side 方的将/帅是否正被攻击
     function isInCheck(side) {
         const king = findKing(side);
         if (!king) return true;
         const kx = king.x, ky = king.y;
-        const enemyRed = side === 'black'; // 敌方是红方
-        const enemyIsRed = !isRed(side === 'red' ? 'K' : 'k') === false ? false : false;
-        // 简化：敌方棋子满足 isRed 时是红方
         const isEnemy = (p) => {
             if (!p) return false;
             return side === 'red' ? isBlack(p) : isRed(p);
         };
 
-        // 1. 车 / 炮 / 将（对面）的直线攻击
         const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
         for (const [dx, dy] of dirs) {
             let nx = kx + dx, ny = ky + dy;
@@ -421,15 +654,10 @@
                     if (!jumped) {
                         if (isEnemy(p)) {
                             const k = p.toLowerCase();
-                            // 车 或 将（相邻）
                             if (k === 'r') return true;
                             if (k === 'k') {
                                 const d = Math.abs(nx - kx) + Math.abs(ny - ky);
                                 if (d === 1) return true;
-                            }
-                            // 将帅对面
-                            if (k === 'k' && (side === 'red' ? p === 'k' : p === 'K')) {
-                                // 只有同列才可能对面
                             }
                         }
                         jumped = true;
@@ -441,32 +669,24 @@
                 nx += dx; ny += dy;
             }
         }
-        // 将帅对面
         if (kingsFacing()) return true;
 
-        // 2. 马攻击
         const knightOffsets = [
             [1, 2, 0, 1],[-1, 2, 0, 1],[1,-2,0,-1],[-1,-2,0,-1],
             [2, 1, 1, 0],[2,-1, 1, 0],[-2, 1,-1, 0],[-2,-1,-1, 0]
         ];
         for (const [dx, dy, lx, ly] of knightOffsets) {
-            // 从将的位置反推，看有没有敌方马
             const nx = kx + dx, ny = ky + dy;
             if (nx < 0 || nx > 8 || ny < 0 || ny > 9) continue;
             const p = board[ny][nx];
-            if (!p) continue;
-            if (!isEnemy(p)) continue;
+            if (!p || !isEnemy(p)) continue;
             if (p.toLowerCase() !== 'n') continue;
-            // 检查马腿（马腿在马和目标之间）
-            // 从马的位置出发，马腿方向：以马为中心，向将的方向
             const legX = nx + lx, legY = ny + ly;
-            if (board[legY][legX]) continue;
+            if (board[legY] && board[legY][legX]) continue;
             return true;
         }
 
-        // 3. 兵/卒攻击
         if (side === 'red') {
-            // 敌方黑兵在 red 帅下方一行或同行左右
             if (ky - 1 >= 0 && board[ky - 1][kx] === 'p') return true;
             if (kx - 1 >= 0 && board[ky][kx - 1] === 'p') return true;
             if (kx + 1 <= 8 && board[ky][kx + 1] === 'p') return true;
@@ -475,8 +695,6 @@
             if (kx - 1 >= 0 && board[ky][kx - 1] === 'P') return true;
             if (kx + 1 <= 8 && board[ky][kx + 1] === 'P') return true;
         }
-
-        // 4. 象/士 攻击（几乎不可能将帅，但严谨起见忽略；走子规则会保证它们不越界）
         return false;
     }
 
@@ -537,7 +755,6 @@
 
     function undo() {
         if (history.length === 0 || aiThinking) return;
-        // 循环撤销，直到轮到玩家
         do {
             const last = history.pop();
             board[last.from.y][last.from.x] = board[last.to.y][last.to.x];
@@ -588,7 +805,7 @@
         endModalTitle.textContent = title;
         endModalSub.textContent = sub;
         endModal.classList.add('show');
-        aiThinking = false; // 强制复位，避免被将死时卡住
+        aiThinking = false;
         turnLabel.textContent = '对局结束';
     }
 
@@ -615,7 +832,6 @@
             if (side === 'black' && !isBlack(p)) continue;
             getLegalMoves(x, y).forEach(m => result.push({ from: { x, y }, to: m }));
         }
-        // 着法排序：吃子优先（吃价值高的在前）
         result.sort((a, b) => {
             const pa = board[a.to.y][a.to.x];
             const pb = board[b.to.y][b.to.x];
@@ -627,11 +843,8 @@
     }
 
     function boardHash() {
-        // 简易 zobrist：把棋盘拼成字符串（够用；如需性能可换真正的 Zobrist）
         let s = '';
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            s += board[y][x] || '.';
-        }
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) s += board[y][x] || '.';
         return s;
     }
 
@@ -640,7 +853,6 @@
         if (!findKing('black')) return -999999;
         if (depth === 0) return evaluate();
 
-        // 置换表查询
         const key = `${depth}|${maximizing ? 'R' : 'B'}|${boardHash()}`;
         if (transposition.has(key)) return transposition.get(key);
 
