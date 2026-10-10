@@ -39,9 +39,15 @@ body.ink-theme::before { display: none; }
     justify-content: center;
     width: 100%;
 }
-.chess-board-wrap { display: flex; justify-content: center; align-items: center; }
+.chess-board-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-/* 棋盘 */
+/* ============================================================
+   棋盘：width 由 grid 内容决定，木框计入 box-sizing
+   ============================================================ */
 .chess-board {
     position: relative;
     display: grid;
@@ -71,7 +77,9 @@ body.ink-theme::before { display: none; }
     background-clip: padding-box;
     touch-action: manipulation;
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
-    box-sizing: content-box;
+    width: max-content;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .chess-board::before {
     content: '';
@@ -106,6 +114,7 @@ body.ink-theme::before { display: none; }
     opacity: 0.75;
 }
 
+/* 九宫斜线 */
 .chess-board .palace-top,
 .chess-board .palace-bottom {
     position: absolute;
@@ -121,6 +130,7 @@ body.ink-theme::before { display: none; }
 .chess-board .palace-top { top: 0; }
 .chess-board .palace-bottom { bottom: 0; }
 
+/* 楚河汉界 */
 .chess-river {
     position: absolute;
     left: 0;
@@ -329,9 +339,7 @@ body.ink-theme::before { display: none; }
     .chess-layout { grid-template-columns: auto 170px; gap: 14px; }
 }
 
-/* ============================================================
-   手机端：棋盘铺满屏宽，侧栏移到下方
-   ============================================================ */
+/* 手机端：木框收窄到 6px，棋盘宽度由 grid 决定 */
 @media (max-width: 767px) {
     body.ink-theme { padding: 0; }
 
@@ -339,7 +347,7 @@ body.ink-theme::before { display: none; }
         grid-template-columns: 1fr;
         gap: 10px;
         align-items: stretch;
-        justify-items: stretch;
+        justify-items: center;
         width: 100%;
         padding: 0 6px;
         box-sizing: border-box;
@@ -349,25 +357,23 @@ body.ink-theme::before { display: none; }
         display: flex;
         justify-content: center;
     }
-    /* 关键：棋盘宽度铺满 */
     .chess-board {
-        width: 100%;
+        border-width: 6px;
+        width: max-content;
         max-width: 100%;
         box-sizing: border-box;
-        border-width: 8px;
         box-shadow:
             inset 0 0 0 1px #C9A961,
             inset 0 0 0 2px rgba(44, 44, 44, 0.6),
             inset 0 0 30px rgba(120, 90, 40, 0.2),
             0 6px 16px rgba(44, 30, 10, 0.3);
     }
-    .chess-board::before { inset: -8px; }
+    .chess-board::before { inset: -6px; }
     .chess-river {
         font-size: calc(var(--cell) * 0.7);
         letter-spacing: 0.1em;
     }
 
-    /* 侧栏横排 */
     .chess-side {
         flex-direction: row;
         flex-wrap: wrap;
@@ -402,6 +408,41 @@ body.ink-theme::before { display: none; }
         min-height: 42px;
     }
 }
+
+/* 水墨模态框 */
+body.ink-theme .modal-box {
+    background: #F5EFE0;
+    border: 1px solid #4A4A4A;
+    border-radius: 2px;
+    box-shadow:
+        inset 0 0 40px rgba(180, 160, 120, 0.2),
+        0 20px 60px rgba(44, 30, 10, 0.3);
+    font-family: "KaiTi", "STKaiti", serif;
+    padding: 40px 48px;
+    max-width: 90vw;
+    width: 420px;
+}
+body.ink-theme .modal-box h2 {
+    color: #1A1A1A;
+    font-size: 26px;
+    letter-spacing: 6px;
+    margin-bottom: 16px;
+    font-weight: 400;
+}
+body.ink-theme .modal-box p {
+    color: #4A4A4A;
+    font-size: 15px;
+    letter-spacing: 3px;
+}
+body.ink-theme .modal-box .big-value {
+    color: #B83B3B;
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-family: "KaiTi", "STKaiti", serif;
+}
+body.ink-theme .modal-actions { display: flex; gap: 12px; justify-content: center; }
+body.ink-theme .modal-actions .ink-btn { flex: 1; }
 </style>
 </head>
 <body class="embedded ink-theme">
@@ -493,7 +534,7 @@ body.ink-theme::before { display: none; }
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
     // ============================================================
-    // 棋盘尺寸：手机端铺满屏宽
+    // 棋盘尺寸：--cell 是唯一尺寸来源，木框宽 6px 手机 / 12px 桌面
     // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.chess-board-wrap');
@@ -501,15 +542,13 @@ body.ink-theme::before { display: none; }
         const vh = window.innerHeight;
         const isMobile = window.innerWidth <= 767;
 
-        // 木框 = 12px × 2 = 24px（桌面），8px × 2 = 16px（手机）
-        const frame = isMobile ? 16 : 24;
-        // 桌面：木框 + 内边距；手机：只保留极少边距
+        // 木框：手机 6px×2 = 12，桌面 12px×2 = 24
+        const frame = isMobile ? 12 : 24;
         const availW = vw - frame;
-        // 手机端：给侧栏和按钮预留约 260px（nav ~ 130 + 侧栏卡片 ~ 80 + gap）
-        const availH = isMobile ? vh - 280 : vh - 240;
+        const availH = isMobile ? vh - 260 : vh - 220;
         const byW = Math.floor(availW / 9);
         const byH = Math.floor(availH / 10);
-        return Math.max(24, Math.min(byW, byH, isMobile ? 48 : 56));
+        return Math.max(20, Math.min(byW, byH, isMobile ? 44 : 56));
     }
 
     let cellEls = null;
