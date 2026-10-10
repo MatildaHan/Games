@@ -17,19 +17,21 @@
     transition: all 0.15s;
 }
 .color-swatch.active { border-color: #fff; transform: scale(1.1); }
+.gc-legend { color: var(--text-sub); font-size: 12px; }
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="gc-wrap">
         <div class="gc-info">
-            目标：给所有区域着色，相邻区域颜色不能相同。已用颜色 <b id="colorCount">0</b>
+            目标：给所有区域着色，相邻区域不能同色。已用颜色 <b id="colorCount">0</b>
         </div>
         <div class="gc-canvas-wrap">
             <canvas id="gcCanvas" width="600" height="400"></canvas>
         </div>
         <div class="color-picker" id="colorPicker"></div>
         <button class="btn" id="btnNew">新地图</button>
+        <div class="gc-legend">提示：每块区域有一个编号，点击区域即可上色</div>
     </div>
 </div>
 
@@ -43,130 +45,136 @@
         '#f472b6','#22d3ee','#fb923c','#facc15','#34d399'
     ];
 
+    const canvas = document.getElementById('gcCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
     let currentColor = 0;
-    let regions = [];      // { seed: {x, y}, color: -1, label }
-    let adjacency = new Set(); // "i,j" (i<j) 真实共享边
-    let canvas, ctx;
+    let regions = [];             // { seed:{x,y}, color:-1, label, pixels:Set }
+    let pixelRegion = null;       // Int32Array，每个像素属于哪个区域
+    let adjacency = null;         // Map<i, Set<j>>
 
     function hexToRgb(hex) {
         const v = parseInt(hex.slice(1), 16);
         return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
     }
 
-    function nearestRegion(x, y) {
-        let best = 0, minD = Infinity;
-        for (let i = 0; i < regions.length; i++) {
-            const s = regions[i].seed;
-            const d = (s.x - x) ** 2 + (s.y - y) ** 2;
-            if (d < minD) { minD = d; best = i; }
+    // ---------- 用泊松盘采样生成一组分布均匀的种子 ----------
+    function generateSeeds(count) {
+        const seeds = [];
+        const margin = 50;
+        const minDist = Math.sqrt((W - margin*2) * (H - margin*2) / count) * 0.75;
+        let attempts = 0;
+        while (seeds.length < count && attempts < 5000) {
+            attempts++;
+            const x = margin + Math.random() * (W - margin*2);
+            const y = margin + Math.random() * (H - margin*2);
+            let ok = true;
+            for (const s of seeds) {
+                if ((s.x - x) ** 2 + (s.y - y) ** 2 < minDist ** 2) { ok = false; break; }
+            }
+            if (ok) seeds.push({ x, y });
         }
-        return best;
+        return seeds;
     }
 
-    function generateMap() {
-        const n = 8 + Math.floor(Math.random() * 5); // 8-12 区域
-        regions = [];
-        for (let i = 0; i < n; i++) {
-            regions.push({
-                seed: {
-                    x: 60 + Math.random() * (canvas.width - 120),
-                    y: 60 + Math.random() * (canvas.height - 120)
-                },
-                color: -1,
-                label: i + 1
-            });
+    // ---------- 精确到像素的 Voronoi 划分 ----------
+    // 关键：一次性计算所有像素的归属，避免扫描 step 不一致带来的漏判
+    function computePixelRegions() {
+        pixelRegion = new Int32Array(W * H);
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                let best = 0, bestD = Infinity;
+                for (let i = 0; i < regions.length; i++) {
+                    const s = regions[i].seed;
+                    const d = (s.x - x) ** 2 + (s.y - y) ** 2;
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                pixelRegion[y * W + x] = best;
+            }
         }
-        computeAdjacency();
     }
 
-    // 通过扫描像素的真实相邻关系（非种子距离近似）
+    // ---------- 基于像素归属的精确相邻关系 ----------
+    // 每个像素检查右、下两个邻居，如果区域不同则记录一对相邻
     function computeAdjacency() {
-        adjacency = new Set();
-        const step = 4;
-        for (let y = 0; y < canvas.height; y += step) {
-            for (let x = 0; x < canvas.width; x += step) {
-                const a = nearestRegion(x, y);
-                if (x + step < canvas.width) {
-                    const b = nearestRegion(x + step, y);
+        adjacency = new Map();
+        for (let i = 0; i < regions.length; i++) adjacency.set(i, new Set());
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const a = pixelRegion[y * W + x];
+                if (x + 1 < W) {
+                    const b = pixelRegion[y * W + (x + 1)];
                     if (a !== b) {
-                        const key = a < b ? `${a},${b}` : `${b},${a}`;
-                        adjacency.add(key);
+                        adjacency.get(a).add(b);
+                        adjacency.get(b).add(a);
                     }
                 }
-                if (y + step < canvas.height) {
-                    const b = nearestRegion(x, y + step);
+                if (y + 1 < H) {
+                    const b = pixelRegion[(y + 1) * W + x];
                     if (a !== b) {
-                        const key = a < b ? `${a},${b}` : `${b},${a}`;
-                        adjacency.add(key);
+                        adjacency.get(a).add(b);
+                        adjacency.get(b).add(a);
                     }
                 }
             }
         }
     }
 
+    // ---------- 渲染 ----------
     function draw() {
-        const img = ctx.createImageData(canvas.width, canvas.height);
-        const step = 2;
-        for (let y = 0; y < canvas.height; y += step) {
-            for (let x = 0; x < canvas.width; x += step) {
-                const idx = nearestRegion(x, y);
-                const r = regions[idx];
-                const c = r.color >= 0 ? hexToRgb(COLORS[r.color]) : [50, 60, 80];
-                for (let dy = 0; dy < step; dy++) {
-                    for (let dx = 0; dx < step; dx++) {
-                        const py = y + dy, px = x + dx;
-                        if (px >= canvas.width || py >= canvas.height) continue;
-                        const p = (py * canvas.width + px) * 4;
-                        img.data[p] = c[0];
-                        img.data[p+1] = c[1];
-                        img.data[p+2] = c[2];
-                        img.data[p+3] = 255;
-                    }
-                }
+        const img = ctx.createImageData(W, H);
+        // 预先算好每个区域当前的颜色 RGB（未填色为深灰）
+        const regionRgb = regions.map(r =>
+            r.color >= 0 ? hexToRgb(COLORS[r.color]) : [50, 60, 80]
+        );
+
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const idx = pixelRegion[y * W + x];
+                const c = regionRgb[idx];
+                const p = (y * W + x) * 4;
+                img.data[p] = c[0];
+                img.data[p+1] = c[1];
+                img.data[p+2] = c[2];
+                img.data[p+3] = 255;
             }
         }
         ctx.putImageData(img, 0, 0);
 
-        // 绘制边界线
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        // 画边界：如果像素与右/下邻居不同区域，画一条暗线
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
         ctx.lineWidth = 1.5;
-        const step2 = 2;
-        for (let y = 0; y < canvas.height; y += step2) {
-            for (let x = 0; x < canvas.width; x += step2) {
-                const a = nearestRegion(x, y);
-                if (x + step2 < canvas.width) {
-                    const b = nearestRegion(x + step2, y);
-                    if (a !== b) {
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                        ctx.lineTo(x + step2, y);
-                        ctx.stroke();
-                    }
+        ctx.beginPath();
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const a = pixelRegion[y * W + x];
+                if (x + 1 < W && pixelRegion[y * W + (x + 1)] !== a) {
+                    ctx.moveTo(x + 1, y);
+                    ctx.lineTo(x + 1, y + 1);
                 }
-                if (y + step2 < canvas.height) {
-                    const b = nearestRegion(x, y + step2);
-                    if (a !== b) {
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                        ctx.lineTo(x, y + step2);
-                        ctx.stroke();
-                    }
+                if (y + 1 < H && pixelRegion[(y + 1) * W + x] !== a) {
+                    ctx.moveTo(x, y + 1);
+                    ctx.lineTo(x + 1, y + 1);
                 }
             }
         }
+        ctx.stroke();
 
         // 编号
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (const r of regions) {
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
             ctx.fillText(r.label, r.seed.x + 1, r.seed.y + 1);
             ctx.fillStyle = '#fff';
             ctx.fillText(r.label, r.seed.x, r.seed.y);
         }
     }
 
+    // ---------- 颜色选择器 ----------
     function buildColorPicker() {
         const picker = document.getElementById('colorPicker');
         picker.innerHTML = '';
@@ -184,35 +192,49 @@
         document.getElementById('colorCount').textContent = used.size;
     }
 
+    // ---------- 校验 ----------
     function checkSolved() {
+        // 1. 是否所有区域都已上色
         for (const r of regions) if (r.color < 0) return false;
-        for (const key of adjacency) {
-            const [i, j] = key.split(',').map(Number);
-            if (regions[i].color === regions[j].color) return false;
+        // 2. 是否所有相邻对颜色都不同
+        for (const [i, neighbors] of adjacency) {
+            for (const j of neighbors) {
+                if (regions[i].color === regions[j].color) return false;
+            }
         }
         return true;
     }
 
+    // ---------- 新地图 ----------
     function newMap() {
-        generateMap();
+        // 区域数量 8-12
+        const n = 8 + Math.floor(Math.random() * 5);
+        const seeds = generateSeeds(n);
+        regions = seeds.map((s, i) => ({ seed: s, color: -1, label: i + 1 }));
+
+        computePixelRegions();
+        computeAdjacency();
+
         draw();
         buildColorPicker();
         updateColorCount();
     }
 
-    canvas = document.getElementById('gcCanvas');
-    ctx = canvas.getContext('2d');
-
+    // ---------- 点击画布 ----------
     canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
-        // 处理 CSS 缩放
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        const idx = nearestRegion(x, y);
+        const x = Math.floor((e.clientX - rect.left) * (W / rect.width));
+        const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
+        if (x < 0 || x >= W || y < 0 || y >= H) return;
+
+        const idx = pixelRegion[y * W + x];
         regions[idx].color = currentColor;
         draw();
         updateColorCount();
-        if (checkSolved()) setTimeout(() => alert('🎉 完美着色！'), 100);
+
+        if (checkSolved()) {
+            setTimeout(() => alert('🎉 完美着色！'), 100);
+        }
     });
 
     document.getElementById('btnNew').onclick = newMap;
