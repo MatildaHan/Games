@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="../css/common.css">
 <style>
 .nono-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.nono-toolbar { display: flex; gap: 12px; align-items: center; color: var(--text-sub); font-size: 13px; }
+.nono-toolbar { display: flex; gap: 16px; align-items: center; color: var(--text-sub); font-size: 13px; }
 .nono-toolbar b { color: var(--primary); }
 .nono-grid { display: grid; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.5); border-radius: 6px; overflow: hidden; }
 .nono-cell { width: 30px; height: 30px; background: rgba(30,41,59,0.9); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.1s; }
@@ -29,11 +29,12 @@
         <div class="nono-toolbar">
             <span>尺寸 <b id="sizeLabel">—</b></span>
             <span>难度 <b id="levelLabel">—</b></span>
-            <span>剩余 <b id="remainLabel">—</b></span>
+            <span>剩余 <b id="remainLabel" style="color: var(--primary);">—</b></span>
         </div>
         <div id="grid" class="nono-grid"></div>
         <div style="display:flex; gap:12px;">
             <button class="btn" id="btnNew">新游戏</button>
+            <button class="btn ghost" id="btnCheck">检查</button>
             <button class="btn ghost" id="btnLevel">切换难度</button>
         </div>
     </div>
@@ -66,7 +67,7 @@
             for (let x = 0; x <= Math.floor((size - 1) / 2); x++) {
                 const v = Math.random() < density ? 1 : 0;
                 sol[y][x] = v;
-                sol[y][size - 1 - x] = v; // 左右镜像，图案更美观
+                sol[y][size - 1 - x] = v;
             }
         }
         return sol;
@@ -106,14 +107,12 @@
         gridEl.style.gridTemplateColumns = `${maxRowClue * clueSize}px repeat(${size}, ${cellSize}px)`;
         gridEl.style.gridTemplateRows = `${maxColClue * clueSize}px repeat(${size}, ${cellSize}px)`;
 
-        // 左上角空白
         const corner = document.createElement('div');
         corner.className = 'nono-clue corner';
         corner.style.gridColumn = '1 / 2';
         corner.style.gridRow = '1 / 2';
         gridEl.appendChild(corner);
 
-        // 列线索
         for (let c = 0; c < size; c++) {
             const el = document.createElement('div');
             el.className = 'nono-clue top';
@@ -123,7 +122,6 @@
             gridEl.appendChild(el);
         }
 
-        // 行线索 + 棋盘
         for (let r = 0; r < size; r++) {
             const rowEl = document.createElement('div');
             rowEl.className = 'nono-clue';
@@ -158,7 +156,17 @@
     function updateRemain() {
         let filled = 0;
         gridState.forEach(r => r.forEach(v => { if (v === 1) filled++; }));
-        remainLabel.textContent = Math.max(0, totalFilled - filled);
+        const diff = totalFilled - filled;
+        if (diff > 0) {
+            remainLabel.textContent = diff;
+            remainLabel.style.color = 'var(--primary)';
+        } else if (diff === 0) {
+            remainLabel.textContent = '0';
+            remainLabel.style.color = 'var(--primary)';
+        } else {
+            remainLabel.textContent = `超出 ${-diff}`;
+            remainLabel.style.color = 'var(--danger)';
+        }
     }
 
     function checkWin() {
@@ -173,6 +181,23 @@
         setTimeout(() => alert('🎉 恭喜完成数织！'), 50);
     }
 
+    function checkAnswer() {
+        const size = solution.length;
+        let errors = 0;
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                const want = solution[r][c] === 1;
+                const have = gridState[r][c] === 1;
+                if (want !== have) errors++;
+            }
+        }
+        if (errors === 0) {
+            alert('🎉 全部正确！');
+        } else {
+            alert(`还有 ${errors} 处需要调整`);
+        }
+    }
+
     function newGame() {
         const lv = LEVELS[levelIdx];
         solution = generateSolution(lv.size, lv.density);
@@ -185,6 +210,7 @@
     }
 
     document.getElementById('btnNew').onclick = newGame;
+    document.getElementById('btnCheck').onclick = checkAnswer;
     document.getElementById('btnLevel').onclick = () => {
         levelIdx = (levelIdx + 1) % LEVELS.length;
         newGame();
