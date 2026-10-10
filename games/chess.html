@@ -3,403 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>中国象棋</title>
+<title>斑马谜题</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.chess-layout {
-    display: grid;
-    grid-template-columns: auto 200px;
-    gap: 20px;
-    align-items: flex-start;
-    justify-content: center;
-    width: 100%;
-}
-.chess-board-wrap { display: flex; justify-content: center; align-items: center; }
-
-/* ============================================================
-   棋盘：真实象棋纸质感
-   ============================================================ */
-.chess-board {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(9, var(--cell, 52px));
-    grid-template-rows: repeat(10, var(--cell, 52px));
-    /* 用木质外框 + 米黄棋盘纸 */
-    background:
-        /* 棋盘纸的内阴影，让纸看起来有厚度 */
-        radial-gradient(ellipse at center, rgba(255,255,255,0.35) 0%, rgba(0,0,0,0) 70%),
-        /* 米黄主色，带一点渐变，模拟宣纸 */
-        linear-gradient(135deg, #f3e2b6 0%, #ecd9a4 40%, #e6cd8f 100%);
-    padding: 0;
-    border: 10px solid #6b4423; /* 木框 */
-    border-radius: 6px;
-    box-shadow:
-        inset 0 0 0 2px #3a2412,   /* 内描边，木质沟槽 */
-        inset 0 0 0 3px #c9a86a,   /* 内侧金色描线 */
-        inset 0 0 40px rgba(80, 40, 10, 0.25), /* 纸张暗角 */
-        0 10px 30px rgba(0,0,0,0.6),
-        0 2px 6px rgba(0,0,0,0.4);
-    /* 木框纹理 */
-    background-clip: padding-box;
-    touch-action: manipulation;
-    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
-}
-
-/* 木框纹理（用伪元素盖在 border 上） */
-.chess-board::before {
-    content: '';
-    position: absolute;
-    inset: -10px;
-    border-radius: 6px;
-    background:
-        repeating-linear-gradient(
-            92deg,
-            rgba(0,0,0,0.08) 0px,
-            rgba(0,0,0,0.08) 1px,
-            transparent 1px,
-            transparent 3px
-        ),
-        linear-gradient(180deg, #7a4e26 0%, #5c3818 50%, #6b4423 100%);
-    z-index: -1;
-    pointer-events: none;
-}
-
-/* 棋盘线条（格线、九宫斜线、楚河汉界） */
-.chess-board::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    /* 横线：10 条（每个交叉点所在位置的中心） */
-    background-image:
-        /* 棋盘格线（竖线 9 条、横线 10 条） */
-        linear-gradient(to right, #4a2c14 1px, transparent 1px),
-        linear-gradient(to bottom, #4a2c14 1px, transparent 1px);
-    background-size:
-        var(--cell) var(--cell),
-        var(--cell) var(--cell);
-    background-position:
-        calc(var(--cell) / 2) 0,
-        0 calc(var(--cell) / 2);
-    /* 用 mask 只保留棋盘有效区域（外框内 + 上下各半格） */
-    /* 简化：不裁剪，靠 border 隐藏溢出 */
-    opacity: 0.85;
-}
-
-/* 楚河汉界文字 */
-.chess-river {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(var(--cell) * 4.5);
-    height: var(--cell);
+.zebra-wrap {
     display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-height: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+}
+.zebra-toolbar {
+    display: flex;
+    gap: 10px;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16%;
-    font-family: "KaiTi", "STKaiti", serif;
-    font-size: calc(var(--cell) * 0.55);
-    color: #2c1a0a;
-    letter-spacing: 6px;
-    pointer-events: none;
-    user-select: none;
-    z-index: 1;
-    font-weight: 700;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    background: rgba(0,0,0,0.3);
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text-sub);
+    flex-wrap: wrap;
+    flex-shrink: 0;
 }
-
-/* 九宫斜线：用两个绝对定位的 SVG 覆盖在九宫区域 */
-.chess-palace {
-    position: absolute;
-    width: calc(var(--cell) * 3);
-    height: calc(var(--cell) * 3);
-    pointer-events: none;
-    z-index: 1;
+.zebra-toolbar b { color: var(--primary); }
+.zebra-nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.zebra-problem {
+    background: rgba(0,0,0,0.3);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: var(--text-sub);
+    max-height: 200px;
+    overflow-y: auto;
+    flex-shrink: 0;
 }
-.chess-palace.top { top: 0; left: calc(var(--cell) * 3); }
-.chess-palace.bottom { bottom: 0; left: calc(var(--cell) * 3); }
-.chess-palace svg { width: 100%; height: 100%; display: block; }
-.chess-palace line {
-    stroke: #4a2c14;
-    stroke-width: 2;
-    stroke-linecap: round;
-    opacity: 0.85;
+.zebra-problem b { color: var(--primary); }
+.zebra-problem .q { color: #fff; font-weight: 700; margin-top: 6px; display: block; }
+.zebra-table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
 }
-
-/* 炮/兵位置标记（十字小刻线） */
-.chess-marker {
-    position: absolute;
-    width: calc(var(--cell) * 0.55);
-    height: calc(var(--cell) * 0.55);
-    pointer-events: none;
-    z-index: 1;
+.zebra-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    table-layout: fixed;
+    min-width: 460px;
 }
-.chess-marker::before,
-.chess-marker::after {
-    content: '';
-    position: absolute;
-    background: #4a2c14;
-    opacity: 0.75;
+.zebra-table th, .zebra-table td {
+    padding: 5px 4px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px;
 }
-.chess-marker::before {
-    /* 竖线 */
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    transform: translateX(-50%);
+.zebra-table th {
+    background: rgba(0,0,0,0.3);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 11.5px;
+    white-space: nowrap;
 }
-.chess-marker::after {
-    /* 横线 */
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 2px;
-    transform: translateY(-50%);
-}
-/* 用 clip-path 挖去中间，形成 4 个 L 形小角 */
-.chess-marker {
-    --half: calc(var(--cell) * 0.28);
-    -webkit-mask-image:
-        linear-gradient(#000, #000),
-        radial-gradient(circle, transparent 40%, #000 41%);
-    -webkit-mask-composite: source-over;
-}
-
-/* ============================================================
-   棋子
-   ============================================================ */
-.chess-cell {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    z-index: 3;
-}
-
-/* 棋子实体 */
-.chess-piece {
-    width: calc(var(--cell, 52px) * 0.86);
-    height: calc(var(--cell, 52px) * 0.86);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: "KaiTi", "STKaiti", "Songti SC", serif;
-    font-weight: 700;
-    font-size: calc(var(--cell, 52px) * 0.46);
-    line-height: 1;
-    position: relative;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    /* 圆盘立体感：外深内浅 */
-    background:
-        radial-gradient(circle at 35% 30%, #ffffff 0%, #f5efd8 30%, #e8d9a8 65%, #cbb177 100%);
-    box-shadow:
-        /* 外阴影（浮起） */
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        /* 内侧凹边 */
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        /* 外圈金属亮边 */
-        inset 0 0 0 2px #b89464,
-        inset 0 0 0 3px #8a6a3c;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
-}
-
-/* 棋子内圈线条（像一个圆环） */
-.chess-piece::before {
-    content: '';
-    position: absolute;
-    inset: 14%;
-    border-radius: 50%;
-    border: 1.5px solid currentColor;
-    opacity: 0.55;
-    pointer-events: none;
-}
-
-/* 红方棋子：红木质感 */
-.chess-cell.red .chess-piece {
-    color: #a01e1e;
-    background:
-        radial-gradient(circle at 35% 30%, #fdf6e3 0%, #f7ecc9 35%, #efdca4 70%, #d9b877 100%);
-    box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(160, 90, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #c08040,
-        inset 0 0 0 3px #8a2020;
-}
-
-/* 黑方棋子：深木/黑檀质感 */
-.chess-cell.black .chess-piece {
-    color: #1a1a1a;
-    background:
-        radial-gradient(circle at 35% 30%, #f5ebd0 0%, #ecdcb0 35%, #d9c088 70%, #b89a60 100%);
-    box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(60, 40, 20, 0.45),
-        inset 0 2px 3px rgba(255, 255, 255, 0.85),
-        inset 0 0 0 2px #a08050,
-        inset 0 0 0 3px #2a2a2a;
-}
-
-/* 选中：金色光环 */
-.chess-cell.selected .chess-piece {
-    transform: translateY(-2px) scale(1.06);
-    box-shadow:
-        0 5px 10px rgba(0,0,0,0.5),
-        0 2px 4px rgba(0,0,0,0.35),
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #d4af37,
-        inset 0 0 0 3px #b89464,
-        0 0 0 3px rgba(212, 175, 55, 0.7);
-}
-
-/* 可走位置：绿色圆环 */
-.chess-cell.valid::after {
-    content: '';
-    position: absolute;
-    width: calc(var(--cell, 52px) * 0.32);
-    height: calc(var(--cell, 52px) * 0.32);
-    border-radius: 50%;
-    border: 3px solid rgba(46, 160, 67, 0.85);
-    box-shadow: 0 0 8px rgba(46, 160, 67, 0.6), inset 0 0 4px rgba(46, 160, 67, 0.5);
-    background: transparent;
-    pointer-events: none;
-    z-index: 4;
-    animation: validPulse 1.2s ease-in-out infinite;
-}
-@keyframes validPulse {
-    0%, 100% { transform: scale(1); opacity: 0.9; }
-    50% { transform: scale(1.15); opacity: 1; }
-}
-
-/* 上一步：琥珀色光晕 */
-.chess-cell.lastmove .chess-piece {
-    box-shadow:
-        0 3px 6px rgba(0,0,0,0.4),
-        0 1px 2px rgba(0,0,0,0.3),
-        inset 0 -3px 4px rgba(120, 80, 30, 0.35),
-        inset 0 2px 3px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 2px #d4af37,
-        inset 0 0 0 3px #b89464,
-        0 0 0 3px rgba(255, 200, 60, 0.8);
-}
-
-/* 小屏幕：棋子字体略小 */
-@media (max-width: 767px) {
-    .chess-board { border-width: 6px; }
-    .chess-board::before { inset: -6px; }
-}
-
-/* ============================================================
-   侧栏
-   ============================================================ */
-.chess-side { display: flex; flex-direction: column; gap: 10px; }
-.chess-side .card { font-size: 13px; }
-.chess-side .card b { color: var(--primary); }
-.chess-side select {
+.zebra-table select {
     background: rgba(30,41,59,0.9);
     color: var(--text);
     border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 13px;
-    font-family: inherit;
-    width: 100%;
+    border-radius: 6px;
+    padding: 4px 2px;
+    font-size: 12px;
     cursor: pointer;
     outline: none;
-    min-height: 40px;
+    font-family: inherit;
+    width: 100%;
+    text-align-last: center;
+    min-height: 34px;
+}
+.zebra-table select option { background: #1e293b; }
+.zebra-table td.correct { background: rgba(74,222,128,0.25); }
+.zebra-table td.wrong { background: rgba(239,68,68,0.15); }
+.zebra-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+.zebra-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: var(--text-sub);
+    font-size: 14px;
 }
 
-@media (max-width: 1023px) {
-    .chess-layout { grid-template-columns: auto 170px; gap: 14px; }
-}
 @media (max-width: 767px) {
-    .chess-layout {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: center;
-        justify-items: center;
+    .zebra-wrap { gap: 8px; }
+    .zebra-toolbar { font-size: 12px; padding: 8px 10px; }
+    .zebra-nav .btn {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-height: 36px;
     }
-    .chess-side {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-        gap: 8px;
-    }
-    .chess-side .card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
-    .chess-side select { font-size: 12px; padding: 6px; min-height: 36px; }
-    .chess-side .btn { flex: 1 1 45%; font-size: 13px; }
+    .zebra-problem { font-size: 12px; padding: 10px 12px; max-height: 160px; }
+    .zebra-table th, .zebra-table td { font-size: 11px; padding: 4px 2px; }
+    .zebra-table select { font-size: 11px; padding: 3px 1px; min-height: 32px; }
+    .zebra-btns .btn { font-size: 12px; padding: 8px 12px; min-height: 40px; }
 }
 </style>
 </head>
 <body class="embedded">
 <div class="game-inner">
-    <div class="chess-layout">
-        <div class="chess-board-wrap">
-            <div id="board" class="chess-board">
-                <!-- 楚河汉界 -->
-                <div class="chess-river">楚 河　　　　　汉 界</div>
-                <!-- 九宫斜线 -->
-                <div class="chess-palace top">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line x1="0" y1="0" x2="100" y2="100" />
-                        <line x1="100" y1="0" x2="0" y2="100" />
-                    </svg>
-                </div>
-                <div class="chess-palace bottom">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line x1="0" y1="0" x2="100" y2="100" />
-                        <line x1="100" y1="0" x2="0" y2="100" />
-                    </svg>
-                </div>
+    <div class="zebra-wrap">
+        <div class="zebra-toolbar">
+            <div>第 <b id="idxLabel">1</b> / <b id="totalLabel">10</b> 题 · <b id="titleLabel">—</b></div>
+            <div class="zebra-nav">
+                <button class="btn ghost" id="btnPrev" style="padding:6px 12px; font-size:13px;">← 上一题</button>
+                <button class="btn ghost" id="btnNext" style="padding:6px 12px; font-size:13px;">下一题 →</button>
+                <button class="btn ghost" id="btnRandom" style="padding:6px 12px; font-size:13px;">🎲 随机</button>
             </div>
         </div>
-        <div class="chess-side">
-            <div class="card">
-                <div class="card-title">对局状态</div>
-                你执：<b id="playerSide">红方</b><br>
-                当前：<b id="turnLabel">红方</b>
-            </div>
-            <div class="card">
-                <div class="card-title">AI 棋力</div>
-                <select id="aiDepth">
-                    <option value="1">简单</option>
-                    <option value="2" selected>普通</option>
-                    <option value="3">困难</option>
-                </select>
-            </div>
-            <button class="btn" id="btnNew">新对局</button>
-            <button class="btn ghost" id="btnUndo">悔棋</button>
-            <button class="btn ghost" id="btnSwap">切换先手</button>
-            <div class="card" style="font-size:12px; line-height:1.7; color: var(--text-sub);">
-                <div class="card-title">操作</div>
-                点击己方棋子 → 点击绿圈落子
-            </div>
+
+        <div class="zebra-problem" id="problem"></div>
+
+        <div class="zebra-table-wrap">
+            <div id="tableWrap"></div>
+        </div>
+
+        <div class="zebra-btns">
+            <button class="btn" id="btnCheck">检查答案</button>
+            <button class="btn ghost" id="btnHint">提示</button>
+            <button class="btn ghost" id="btnReset">重置本题</button>
         </div>
     </div>
 </div>
 
-<div class="modal" id="endModal">
-    <div class="modal-box">
-        <h2 id="endModalTitle">对局结束</h2>
-        <p id="endModalSub">——</p>
-        <div class="modal-actions">
-            <button class="btn" id="btnEndNew">新对局</button>
-            <button class="btn ghost" id="btnEndClose">关闭</button>
-        </div>
-    </div>
-</div>
+<div class="toast-container" id="toastContainer"></div>
 
 <script src="../js/bridge.js"></script>
 <script>
@@ -408,574 +154,696 @@
 
     document.body.classList.add('embedded');
 
-    const INIT = [
-        ['r','n','b','a','k','a','b','n','r'],
-        [0,0,0,0,0,0,0,0,0],
-        [0,'c',0,0,0,0,0,'c',0],
-        ['p',0,'p',0,'p',0,'p',0,'p'],
-        [0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0],
-        ['P',0,'P',0,'P',0,'P',0,'P'],
-        [0,'C',0,0,0,0,0,'C',0],
-        [0,0,0,0,0,0,0,0,0],
-        ['R','N','B','A','K','A','B','N','R']
+    const MAX_HINTS = 3;
+    const HOUSE_COUNT = 5;
+
+    // 立刻通知父页面：已就绪（不管后面的求解）
+    GameBridge.notifyReady();
+
+    // ============================================================
+    // 辅助
+    // ============================================================
+    function posOf(assign, key, value) {
+        for (let i = 0; i < assign.length; i++) {
+            if (assign[i][key] === value) return i;
+        }
+        return -1;
+    }
+    function adjacent(a, b) {
+        return a >= 0 && b >= 0 && Math.abs(a - b) === 1;
+    }
+
+    // ============================================================
+    // 题库：10 道题
+    // 所有 answer 由求解器算出，不写死
+    // ============================================================
+    const PUZZLES = [
+        {
+            title: '爱因斯坦谜题',
+            intro: '5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物各不相同。',
+            clueTexts: [
+                '英国人住在红房子里。',
+                '瑞典人养狗。',
+                '丹麦人喝茶。',
+                '绿房子在白房子的左边。',
+                '绿房子的主人喝咖啡。',
+                '抽 Pall Mall 的人养鸟。',
+                '黄房子的主人抽 Dunhill。',
+                '中间房子的主人喝牛奶。',
+                '挪威人住在第一栋房子。',
+                '抽 Blend 的人住在养猫的人旁边。',
+                '养马的人住在抽 Dunhill 的人旁边。',
+                '抽 Blue Master 的人喝啤酒。',
+                '德国人抽 Prince。',
+                '挪威人住在蓝房子旁边。',
+                '抽 Blend 的人有一个喝水的邻居。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                nationality: { label: '国籍', values: ['挪威人','丹麦人','英国人','德国人','瑞典人'] },
+                color:       { label: '颜色', values: ['黄色','蓝色','红色','绿色','白色'] },
+                drink:       { label: '饮料', values: ['水','茶','牛奶','咖啡','啤酒'] },
+                smoke:       { label: '香烟', values: ['Dunhill','Blend','Pall Mall','Prince','Blue Master'] },
+                pet:         { label: '宠物', values: ['猫','马','鸟','鱼','狗'] }
+            },
+            clues: [
+                a => a[posOf(a,'nationality','英国人')] >= 0 && a[posOf(a,'nationality','英国人')].color === '红色',
+                a => a[posOf(a,'nationality','瑞典人')] >= 0 && a[posOf(a,'nationality','瑞典人')].pet === '狗',
+                a => a[posOf(a,'nationality','丹麦人')] >= 0 && a[posOf(a,'nationality','丹麦人')].drink === '茶',
+                a => posOf(a,'color','绿色') >= 0 && posOf(a,'color','白色') >= 0 && posOf(a,'color','绿色') < posOf(a,'color','白色'),
+                a => a[posOf(a,'color','绿色')] && a[posOf(a,'color','绿色')].drink === '咖啡',
+                a => a[posOf(a,'smoke','Pall Mall')] && a[posOf(a,'smoke','Pall Mall')].pet === '鸟',
+                a => a[posOf(a,'color','黄色')] && a[posOf(a,'color','黄色')].smoke === 'Dunhill',
+                a => a[2] && a[2].drink === '牛奶',
+                a => a[0] && a[0].nationality === '挪威人',
+                a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'pet','猫')),
+                a => adjacent(posOf(a,'pet','马'), posOf(a,'smoke','Dunhill')),
+                a => a[posOf(a,'smoke','Blue Master')] && a[posOf(a,'smoke','Blue Master')].drink === '啤酒',
+                a => a[posOf(a,'nationality','德国人')] && a[posOf(a,'nationality','德国人')].smoke === 'Prince',
+                a => adjacent(posOf(a,'nationality','挪威人'), posOf(a,'color','蓝色')),
+                a => adjacent(posOf(a,'smoke','Blend'), posOf(a,'drink','水'))
+            ],
+            target: { house: 3, key: 'nationality', value: '德国人' }
+        },
+        {
+            title: '足球迷',
+            intro: '5 位朋友排成一排住在不同城市，各自支持不同球队、喝不同饮料、养不同宠物。',
+            clueTexts: [
+                '北京人支持国安。',
+                '上海人喝咖啡。',
+                '广州人养猫。',
+                '深圳人支持恒大。',
+                '中间位置的人喝牛奶。',
+                '支持上港的人住在支持鲁能的人旁边。',
+                '成都人住在第一栋房子。',
+                '喝啤酒的人支持苏宁。',
+                '养狗的人住在喝牛奶的人旁边。',
+                '支持鲁能的人喝矿泉水。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                city:  { label: '城市', values: ['北京人','上海人','广州人','深圳人','成都人'] },
+                drink: { label: '饮料', values: ['水','咖啡','牛奶','啤酒','矿泉水'] },
+                team:  { label: '球队', values: ['国安','上港','鲁能','恒大','苏宁'] },
+                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','仓鼠'] }
+            },
+            clues: [
+                a => a[posOf(a,'city','北京人')] >= 0 && a[posOf(a,'city','北京人')].team === '国安',
+                a => a[posOf(a,'city','上海人')] >= 0 && a[posOf(a,'city','上海人')].drink === '咖啡',
+                a => a[posOf(a,'city','广州人')] >= 0 && a[posOf(a,'city','广州人')].pet === '猫',
+                a => a[posOf(a,'city','深圳人')] >= 0 && a[posOf(a,'city','深圳人')].team === '恒大',
+                a => a[2] && a[2].drink === '牛奶',
+                a => adjacent(posOf(a,'team','上港'), posOf(a,'team','鲁能')),
+                a => a[0] && a[0].city === '成都人',
+                a => a[posOf(a,'drink','啤酒')] && a[posOf(a,'drink','啤酒')].team === '苏宁',
+                a => adjacent(posOf(a,'pet','狗'), posOf(a,'drink','牛奶')),
+                a => a[posOf(a,'team','鲁能')] && a[posOf(a,'team','鲁能')].drink === '矿泉水'
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五色水果',
+            intro: '5 栋颜色不同的房子，每栋主人喜欢不同水果、饮料和乐器。',
+            clueTexts: [
+                '红房子的主人爱吃苹果。',
+                '蓝房子的主人喝咖啡。',
+                '绿房子的主人弹钢琴。',
+                '黄房子的主人喝牛奶。',
+                '中间房子的人喝矿泉水。',
+                '白房子的主人住在绿房子的右边。',
+                '弹吉他的主人住在爱吃香蕉的主人旁边。',
+                '喝橙汁的人弹小提琴。',
+                '喝牛奶的人住在弹吉他的主人旁边。',
+                '蓝房子的主人住在第一栋房子。'
+            ],
+            question: '谁爱吃香蕉？',
+            categories: {
+                color:  { label: '颜色', values: ['红色','蓝色','绿色','黄色','白色'] },
+                fruit:  { label: '水果', values: ['苹果','香蕉','橘子','葡萄','西瓜'] },
+                drink:  { label: '饮料', values: ['咖啡','牛奶','矿泉水','橙汁','茶'] },
+                music:  { label: '乐器', values: ['钢琴','吉他','小提琴','笛子','鼓'] }
+            },
+            clues: [
+                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].fruit === '苹果',
+                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].drink === '咖啡',
+                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].music === '钢琴',
+                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].drink === '牛奶',
+                a => a[2] && a[2].drink === '矿泉水',
+                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
+                a => adjacent(posOf(a,'music','吉他'), posOf(a,'fruit','香蕉')),
+                a => a[posOf(a,'drink','橙汁')] && a[posOf(a,'drink','橙汁')].music === '小提琴',
+                a => adjacent(posOf(a,'drink','牛奶'), posOf(a,'music','吉他')),
+                a => a[0] && a[0].color === '蓝色'
+            ],
+            target: { house: -1, key: 'fruit', value: '香蕉' }
+        },
+        {
+            title: '五位职业',
+            intro: '5 个人从事不同职业，住不同楼层，养不同宠物，喝不同饮料。',
+            clueTexts: [
+                '医生住在最高层。',
+                '律师养狗。',
+                '教师喝咖啡。',
+                '工程师住在律师的楼上。',
+                '养猫的人喝牛奶。',
+                '程序员的宠物是仓鼠。',
+                '喝啤酒的人住在第一层。',
+                '喝矿泉水的人住在律师的楼上。',
+                '喜欢游泳的人住在养狗的人楼上。',
+                '教师住在养鸟的人旁边。'
+            ],
+            question: '谁住在第 3 层？',
+            categories: {
+                job:   { label: '职业', values: ['医生','律师','教师','工程师','程序员'] },
+                floor: { label: '楼层', values: ['1层','2层','3层','4层','5层'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','仓鼠','兔子'] },
+                drink: { label: '饮料', values: ['咖啡','牛奶','啤酒','矿泉水','茶'] }
+            },
+            clues: [
+                a => a[posOf(a,'job','医生')] === 4,
+                a => a[posOf(a,'job','律师')] && a[posOf(a,'job','律师')].pet === '狗',
+                a => a[posOf(a,'job','教师')] && a[posOf(a,'job','教师')].drink === '咖啡',
+                a => posOf(a,'job','工程师') > posOf(a,'job','律师'),
+                a => a[posOf(a,'pet','猫')] && a[posOf(a,'pet','猫')].drink === '牛奶',
+                a => a[posOf(a,'job','程序员')] && a[posOf(a,'job','程序员')].pet === '仓鼠',
+                a => a[0] && a[0].drink === '啤酒',
+                a => posOf(a,'drink','矿泉水') > posOf(a,'job','律师'),
+                a => posOf(a,'pet','狗') >= 0 && posOf(a,'pet','狗') < 4,
+                a => adjacent(posOf(a,'job','教师'), posOf(a,'pet','鸟'))
+            ],
+            target: { house: 2, key: 'job', value: '律师' }
+        },
+        {
+            title: '五国咖啡',
+            intro: '5 位来自不同国家的人，各自喝不同咖啡、听不同音乐、养不同宠物、住不同颜色的房子。',
+            clueTexts: [
+                '意大利人喝浓缩咖啡。',
+                '美国人听爵士乐。',
+                '法国人养狗。',
+                '德国人喝拿铁。',
+                '红房子的主人听古典乐。',
+                '日本人住在第一栋房子。',
+                '喝美式咖啡的人住在蓝房子里。',
+                '听摇滚乐的人养猫。',
+                '中间房子的人喝卡布奇诺。',
+                '绿房子的主人住在白房子的左边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                nationality: { label: '国籍', values: ['意大利人','美国人','法国人','德国人','日本人'] },
+                coffee:      { label: '咖啡', values: ['浓缩','拿铁','美式','卡布奇诺','摩卡'] },
+                music:       { label: '音乐', values: ['爵士','古典','摇滚','流行','民谣'] },
+                pet:         { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] },
+                color:       { label: '房子', values: ['红色','蓝色','绿色','白色','黄色'] }
+            },
+            clues: [
+                a => a[posOf(a,'nationality','意大利人')] >= 0 && a[posOf(a,'nationality','意大利人')].coffee === '浓缩',
+                a => a[posOf(a,'nationality','美国人')] >= 0 && a[posOf(a,'nationality','美国人')].music === '爵士',
+                a => a[posOf(a,'nationality','法国人')] >= 0 && a[posOf(a,'nationality','法国人')].pet === '狗',
+                a => a[posOf(a,'nationality','德国人')] >= 0 && a[posOf(a,'nationality','德国人')].coffee === '拿铁',
+                a => a[posOf(a,'color','红色')] && a[posOf(a,'color','红色')].music === '古典',
+                a => a[0] && a[0].nationality === '日本人',
+                a => a[posOf(a,'coffee','美式')] && a[posOf(a,'coffee','美式')].color === '蓝色',
+                a => a[posOf(a,'music','摇滚')] && a[posOf(a,'music','摇滚')].pet === '猫',
+                a => a[2] && a[2].coffee === '卡布奇诺',
+                a => posOf(a,'color','绿色') >= 0 && posOf(a,'color','白色') >= 0 && posOf(a,'color','绿色') < posOf(a,'color','白色')
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五位棋手',
+            intro: '5 位棋手坐在不同位置，各自擅长不同棋类、喝不同茶、养不同宠物、穿不同颜色衣服。',
+            clueTexts: [
+                '穿红衣服的人擅长象棋。',
+                '穿蓝衣服的人喝绿茶。',
+                '穿绿衣服的人擅长围棋。',
+                '中间位置的人喝红茶。',
+                '穿黄衣服的人擅长五子棋。',
+                '穿白衣服的人坐在穿绿衣服的人的右边。',
+                '养狗的人擅长国际象棋。',
+                '喝花茶的人养猫。',
+                '养鸟的人坐在养猫的人的左边。',
+                '喝乌龙茶的人坐在第一位置。'
+            ],
+            question: '谁擅长围棋？',
+            categories: {
+                color: { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
+                game:  { label: '棋类', values: ['象棋','围棋','五子棋','国际象棋','军棋'] },
+                tea:   { label: '茶',   values: ['绿茶','红茶','花茶','乌龙茶','普洱茶'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','仓鼠'] }
+            },
+            clues: [
+                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].game === '象棋',
+                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].tea === '绿茶',
+                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].game === '围棋',
+                a => a[2] && a[2].tea === '红茶',
+                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].game === '五子棋',
+                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
+                a => a[posOf(a,'pet','狗')] && a[posOf(a,'pet','狗')].game === '国际象棋',
+                a => a[posOf(a,'tea','花茶')] && a[posOf(a,'tea','花茶')].pet === '猫',
+                a => posOf(a,'pet','鸟') >= 0 && posOf(a,'pet','猫') >= 0 && posOf(a,'pet','鸟') < posOf(a,'pet','猫'),
+                a => a[0] && a[0].tea === '乌龙茶'
+            ],
+            target: { house: -1, key: 'color', value: '绿色' }
+        },
+        {
+            title: '五个学生',
+            intro: '5 位学生坐在一排，各自来自不同城市、擅长不同科目、喜欢不同科目、养不同宠物。',
+            clueTexts: [
+                '北京学生擅长数学。',
+                '上海学生喜欢物理。',
+                '广州学生养猫。',
+                '深圳学生擅长英语。',
+                '中间位置的学生喜欢化学。',
+                '成都学生坐在第一位置。',
+                '养狗的学生擅长语文。',
+                '喜欢生物的学生养鸟。',
+                '擅长数学的学生坐在养狗的学生旁边。',
+                '喜欢物理的学生住在成都学生旁边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                city:  { label: '城市', values: ['北京','上海','广州','深圳','成都'] },
+                skill: { label: '擅长', values: ['数学','英语','语文','物理','化学'] },
+                like:  { label: '喜欢', values: ['物理','化学','生物','地理','历史'] },
+                pet:   { label: '宠物', values: ['猫','狗','鸟','鱼','兔子'] }
+            },
+            clues: [
+                a => a[posOf(a,'city','北京')] >= 0 && a[posOf(a,'city','北京')].skill === '数学',
+                a => a[posOf(a,'city','上海')] >= 0 && a[posOf(a,'city','上海')].like === '物理',
+                a => a[posOf(a,'city','广州')] >= 0 && a[posOf(a,'city','广州')].pet === '猫',
+                a => a[posOf(a,'city','深圳')] >= 0 && a[posOf(a,'city','深圳')].skill === '英语',
+                a => a[2] && a[2].like === '化学',
+                a => a[0] && a[0].city === '成都',
+                a => a[posOf(a,'pet','狗')] && a[posOf(a,'pet','狗')].skill === '语文',
+                a => a[posOf(a,'like','生物')] && a[posOf(a,'like','生物')].pet === '鸟',
+                a => adjacent(posOf(a,'skill','数学'), posOf(a,'pet','狗')),
+                a => adjacent(posOf(a,'like','物理'), posOf(a,'city','成都'))
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五个花园',
+            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水。',
+            clueTexts: [
+                '红色围栏的花园种玫瑰。',
+                '蓝色围栏的花园种郁金香。',
+                '绿色围栏的花园种百合。',
+                '中间花园种向日葵。',
+                '黄色围栏的花园种雏菊。',
+                '白色围栏的花园在绿色围栏的右边。',
+                '早上浇水的人在种向日葵的花园。',
+                '养蜜蜂的花园种玫瑰。',
+                '养蝴蝶的花园在养蜜蜂的花园旁边。',
+                '种郁金香的花园在中午浇水。'
+            ],
+            question: '谁种百合？',
+            categories: {
+                fence: { label: '围栏', values: ['红色','蓝色','绿色','黄色','白色'] },
+                flower:{ label: '花',   values: ['玫瑰','郁金香','百合','向日葵','雏菊'] },
+                time:  { label: '浇水', values: ['早上','中午','下午','傍晚','晚上'] },
+                pet:   { label: '昆虫', values: ['蜜蜂','蝴蝶','瓢虫','萤火虫','蚂蚁'] }
+            },
+            clues: [
+                a => a[posOf(a,'fence','红色')] >= 0 && a[posOf(a,'fence','红色')].flower === '玫瑰',
+                a => a[posOf(a,'fence','蓝色')] >= 0 && a[posOf(a,'fence','蓝色')].flower === '郁金香',
+                a => a[posOf(a,'fence','绿色')] >= 0 && a[posOf(a,'fence','绿色')].flower === '百合',
+                a => a[2] && a[2].flower === '向日葵',
+                a => a[posOf(a,'fence','黄色')] >= 0 && a[posOf(a,'fence','黄色')].flower === '雏菊',
+                a => posOf(a,'fence','白色') > posOf(a,'fence','绿色'),
+                a => a[posOf(a,'time','早上')] && a[posOf(a,'time','早上')].flower === '向日葵',
+                a => a[posOf(a,'pet','蜜蜂')] && a[posOf(a,'pet','蜜蜂')].flower === '玫瑰',
+                a => adjacent(posOf(a,'pet','蝴蝶'), posOf(a,'pet','蜜蜂')),
+                a => a[posOf(a,'flower','郁金香')] && a[posOf(a,'flower','郁金香')].time === '中午'
+            ],
+            target: { house: -1, key: 'fence', value: '绿色' }
+        },
+        {
+            title: '五辆汽车',
+            intro: '5 位车主，各自开不同品牌、不同颜色、不同能源、不同座位数的车，养不同宠物。',
+            clueTexts: [
+                '开奔驰的人开红色车。',
+                '开宝马的人开黑色车。',
+                '开奥迪的人开白色车。',
+                '开特斯拉的人开电动车。',
+                '中间位置的人开 5 座车。',
+                '开丰田的人开蓝色车。',
+                '开混合动力车的人养狗。',
+                '开 7 座车的人养猫。',
+                '养鸟的人开 2 座车。',
+                '开奔驰的人住在开特斯拉的人旁边。'
+            ],
+            question: '谁养鱼？',
+            categories: {
+                brand: { label: '品牌', values: ['奔驰','宝马','奥迪','特斯拉','丰田'] },
+                color: { label: '颜色', values: ['红色','黑色','白色','蓝色','银色'] },
+                fuel:  { label: '能源', values: ['汽油','柴油','电动','混合','氢能'] },
+                seat:  { label: '座位', values: ['2座','4座','5座','7座','9座'] },
+                pet:   { label: '宠物', values: ['狗','猫','鸟','鱼','兔子'] }
+            },
+            clues: [
+                a => a[posOf(a,'brand','奔驰')] >= 0 && a[posOf(a,'brand','奔驰')].color === '红色',
+                a => a[posOf(a,'brand','宝马')] >= 0 && a[posOf(a,'brand','宝马')].color === '黑色',
+                a => a[posOf(a,'brand','奥迪')] >= 0 && a[posOf(a,'brand','奥迪')].color === '白色',
+                a => a[posOf(a,'brand','特斯拉')] >= 0 && a[posOf(a,'brand','特斯拉')].fuel === '电动',
+                a => a[2] && a[2].seat === '5座',
+                a => a[posOf(a,'brand','丰田')] >= 0 && a[posOf(a,'brand','丰田')].color === '蓝色',
+                a => a[posOf(a,'fuel','混合')] && a[posOf(a,'fuel','混合')].pet === '狗',
+                a => a[posOf(a,'seat','7座')] && a[posOf(a,'seat','7座')].pet === '猫',
+                a => a[posOf(a,'pet','鸟')] && a[posOf(a,'pet','鸟')].seat === '2座',
+                a => adjacent(posOf(a,'brand','奔驰'), posOf(a,'brand','特斯拉'))
+            ],
+            target: { house: -1, key: 'pet', value: '鱼' }
+        },
+        {
+            title: '五杯咖啡',
+            intro: '5 个人在咖啡馆点了不同咖啡、加了不同配料、坐在不同位置、看不同书、穿不同颜色衣服。',
+            clueTexts: [
+                '穿红衣服的人点浓缩咖啡。',
+                '穿蓝衣服的人加牛奶。',
+                '穿绿衣服的人看小说。',
+                '中间位置的人点卡布奇诺。',
+                '穿黄衣服的人点美式。',
+                '穿白衣服的人坐在穿绿衣服的右边。',
+                '看杂志的人加糖。',
+                '看报纸的人点摩卡。',
+                '加奶泡的人坐在加糖的人旁边。',
+                '喝拿铁的人坐在第一位。'
+            ],
+            question: '谁看诗集？',
+            categories: {
+                color:  { label: '衣服', values: ['红色','蓝色','绿色','黄色','白色'] },
+                coffee: { label: '咖啡', values: ['浓缩','拿铁','卡布奇诺','美式','摩卡'] },
+                extra:  { label: '配料', values: ['牛奶','糖','奶泡','肉桂','可可'] },
+                book:   { label: '书籍', values: ['小说','杂志','报纸','诗集','漫画'] }
+            },
+            clues: [
+                a => a[posOf(a,'color','红色')] >= 0 && a[posOf(a,'color','红色')].coffee === '浓缩',
+                a => a[posOf(a,'color','蓝色')] >= 0 && a[posOf(a,'color','蓝色')].extra === '牛奶',
+                a => a[posOf(a,'color','绿色')] >= 0 && a[posOf(a,'color','绿色')].book === '小说',
+                a => a[2] && a[2].coffee === '卡布奇诺',
+                a => a[posOf(a,'color','黄色')] >= 0 && a[posOf(a,'color','黄色')].coffee === '美式',
+                a => posOf(a,'color','白色') > posOf(a,'color','绿色'),
+                a => a[posOf(a,'book','杂志')] && a[posOf(a,'book','杂志')].extra === '糖',
+                a => a[posOf(a,'book','报纸')] && a[posOf(a,'book','报纸')].coffee === '摩卡',
+                a => adjacent(posOf(a,'extra','奶泡'), posOf(a,'extra','糖')),
+                a => a[0] && a[0].coffee === '拿铁'
+            ],
+            target: { house: -1, key: 'book', value: '诗集' }
+        }
     ];
 
-    const NAMES = {
-        K:'帅', A:'仕', B:'相', N:'马', R:'车', C:'炮', P:'兵',
-        k:'将', a:'士', b:'象', n:'马', r:'车', c:'炮', p:'卒'
-    };
-    const VALUES = { k: 10000, r: 900, n: 400, c: 450, a: 200, b: 200, p: 100 };
-
-    let board, playerSide, turn, selected, validMoves, gameOver, aiThinking;
-    let lastMove = null;
-    let history = [];
-    let aiTimerId = null;
-
-    const boardEl = document.getElementById('board');
-    const turnLabel = document.getElementById('turnLabel');
-    const playerSideEl = document.getElementById('playerSide');
-    const aiDepthEl = document.getElementById('aiDepth');
-    const endModal = document.getElementById('endModal');
-    const endModalTitle = document.getElementById('endModalTitle');
-    const endModalSub = document.getElementById('endModalSub');
-    const btnEndNew = document.getElementById('btnEndNew');
-    const btnEndClose = document.getElementById('btnEndClose');
-
-    const isRed = p => p && p === p.toUpperCase();
-    const isBlack = p => p && p === p.toLowerCase();
-    const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
-
     // ============================================================
-    // 棋盘尺寸：按可用空间动态计算
+    // 求解器：回溯 + 强剪枝
+    // 关键优化：逐格填值而不是全排列
     // ============================================================
-    function calcCellSize() {
-        const wrap = document.querySelector('.chess-board-wrap');
-        const vw = wrap ? wrap.clientWidth : window.innerWidth;
-        const vh = window.innerHeight;
-        // 棋盘 9 列 × 10 行，宽高比 9:10；木框 10px * 2
-        const frame = 20;
-        const availW = vw - frame - 4;
-        const availH = vh - 240; // 顶部 + 侧栏/按钮预留
-        const byW = Math.floor(availW / 9);
-        const byH = Math.floor(availH / 10);
-        return Math.max(24, Math.min(byW, byH, 56));
-    }
+    function solve(categories, clues, houseCount) {
+        houseCount = houseCount || HOUSE_COUNT;
+        const keys = Object.keys(categories);
+        const solutions = [];
+        const MAX_SOLUTIONS = 2; // 只需要知道是否唯一，找到 2 个就够了
 
-    // ============================================================
-    // 构建棋盘 DOM（棋子用 .chess-piece 包裹，便于做圆形立体）
-    // ============================================================
-    let cellEls = null;
+        // assignment[houseIdx][key] = value
+        const assignment = Array.from({ length: houseCount }, () => ({}));
 
-    function buildBoardDOM() {
-        // 保留已有的装饰元素（楚河汉界、九宫斜线），只清棋子层
-        const decorations = Array.from(boardEl.children);
-        boardEl.innerHTML = '';
-        // 重新加回装饰
-        decorations.forEach(d => boardEl.appendChild(d));
-
-        cellEls = new Array(90);
-        for (let y = 0; y < 10; y++) {
-            for (let x = 0; x < 9; x++) {
-                const el = document.createElement('div');
-                el.className = 'chess-cell';
-                el.onclick = () => onClick(x, y);
-                boardEl.appendChild(el);
-                cellEls[y * 9 + x] = el;
-            }
-        }
-        updateBoardSize();
-    }
-
-    function updateBoardSize() {
-        const cell = calcCellSize();
-        boardEl.style.setProperty('--cell', cell + 'px');
-    }
-
-    function render() {
-        updateBoardSize();
-        for (let y = 0; y < 10; y++) {
-            for (let x = 0; x < 9; x++) {
-                const el = cellEls[y * 9 + x];
-                const p = board[y][x];
-                el.className = 'chess-cell';
-                el.innerHTML = '';
-                if (p) {
-                    const piece = document.createElement('div');
-                    piece.className = 'chess-piece';
-                    piece.textContent = NAMES[p];
-                    el.appendChild(piece);
-                    el.classList.add(isRed(p) ? 'red' : 'black');
-                }
-                if (selected && selected.x === x && selected.y === y) el.classList.add('selected');
-                if (validMoves.some(m => m.x === x && m.y === y)) el.classList.add('valid');
-                if (lastMove && ((lastMove.from.x === x && lastMove.from.y === y) ||
-                                  (lastMove.to.x === x && lastMove.to.y === y))) {
-                    el.classList.add('lastmove');
-                }
-            }
-        }
-        if (!aiThinking) {
-            turnLabel.textContent = turn === 'red' ? '红方' : '黑方';
-        }
-    }
-
-    // ============================================================
-    // 走子规则
-    // ============================================================
-    function getPseudoMoves(x, y) {
-        const p = board[y][x];
-        if (!p) return [];
-        const moves = [];
-        const red = isRed(p);
-        const kind = p.toLowerCase();
-
-        function tryAdd(nx, ny) {
-            if (nx < 0 || nx > 8 || ny < 0 || ny > 9) return false;
-            const t = board[ny][nx];
-            if (t && sameSide(p, t)) return false;
-            moves.push({ x: nx, y: ny });
-            return !t;
-        }
-
-        if (kind === 'r') {
-            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-                let nx = x + dx, ny = y + dy;
-                while (tryAdd(nx, ny)) { nx += dx; ny += dy; }
-            }
-        } else if (kind === 'c') {
-            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-                let nx = x + dx, ny = y + dy, jumped = false;
-                while (nx >= 0 && nx <= 8 && ny >= 0 && ny <= 9) {
-                    const t = board[ny][nx];
-                    if (!jumped) {
-                        if (!t) moves.push({ x: nx, y: ny });
-                        else jumped = true;
-                    } else if (t) {
-                        if (!sameSide(p, t)) moves.push({ x: nx, y: ny });
-                        break;
-                    }
-                    nx += dx; ny += dy;
-                }
-            }
-        } else if (kind === 'n') {
-            const legs = [[1,2,0,1],[-1,2,0,1],[1,-2,0,-1],[-1,-2,0,-1],[2,1,1,0],[2,-1,1,0],[-2,1,-1,0],[-2,-1,-1,0]];
-            for (const [dx, dy, lx, ly] of legs) {
-                const nx = x + dx, ny = y + dy;
-                if (nx < 0 || nx > 8 || ny < 0 || ny > 9) continue;
-                if (board[y + ly][x + lx]) continue;
-                const t = board[ny][nx];
-                if (!t || !sameSide(p, t)) moves.push({ x: nx, y: ny });
-            }
-        } else if (kind === 'b') {
-            for (const [dx, dy] of [[2,2],[2,-2],[-2,2],[-2,-2]]) {
-                const nx = x + dx, ny = y + dy;
-                if (nx < 0 || nx > 8 || ny < 0 || ny > 9) continue;
-                if (red && ny < 5) continue;
-                if (!red && ny > 4) continue;
-                if (board[y + dy / 2][x + dx / 2]) continue;
-                const t = board[ny][nx];
-                if (!t || !sameSide(p, t)) moves.push({ x: nx, y: ny });
-            }
-        } else if (kind === 'a') {
-            for (const [dx, dy] of [[1,1],[1,-1],[-1,1],[-1,-1]]) {
-                const nx = x + dx, ny = y + dy;
-                if (nx < 3 || nx > 5) continue;
-                if (red && (ny < 7 || ny > 9)) continue;
-                if (!red && (ny < 0 || ny > 2)) continue;
-                const t = board[ny][nx];
-                if (!t || !sameSide(p, t)) moves.push({ x: nx, y: ny });
-            }
-        } else if (kind === 'k') {
-            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-                const nx = x + dx, ny = y + dy;
-                if (nx < 3 || nx > 5) continue;
-                if (red && (ny < 7 || ny > 9)) continue;
-                if (!red && (ny < 0 || ny > 2)) continue;
-                const t = board[ny][nx];
-                if (!t || !sameSide(p, t)) moves.push({ x: nx, y: ny });
-            }
-        } else if (kind === 'p') {
-            const forward = red ? -1 : 1;
-            const ny = y + forward;
-            if (ny >= 0 && ny <= 9) {
-                const t = board[ny][x];
-                if (!t || !sameSide(p, t)) moves.push({ x, y: ny });
-            }
-            if ((red && y <= 4) || (!red && y >= 5)) {
-                for (const dx of [-1, 1]) {
-                    const nx = x + dx;
-                    if (nx < 0 || nx > 8) continue;
-                    const t = board[y][nx];
-                    if (!t || !sameSide(p, t)) moves.push({ x: nx, y });
-                }
-            }
-        }
-        return moves;
-    }
-
-    // ============================================================
-    // 快速 isInCheck
-    // ============================================================
-    function findKing(side) {
-        const target = side === 'red' ? 'K' : 'k';
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            if (board[y][x] === target) return { x, y };
-        }
-        return null;
-    }
-
-    function kingsFacing() {
-        const kr = findKing('red'), kb = findKing('black');
-        if (!kr || !kb) return false;
-        if (kr.x !== kb.x) return false;
-        for (let y = Math.min(kr.y, kb.y) + 1; y < Math.max(kr.y, kb.y); y++) {
-            if (board[y][kr.x]) return false;
-        }
-        return true;
-    }
-
-    function isInCheck(side) {
-        const king = findKing(side);
-        if (!king) return true;
-        const kx = king.x, ky = king.y;
-        const isEnemy = (p) => {
-            if (!p) return false;
-            return side === 'red' ? isBlack(p) : isRed(p);
-        };
-
-        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-        for (const [dx, dy] of dirs) {
-            let nx = kx + dx, ny = ky + dy;
-            let jumped = false;
-            while (nx >= 0 && nx <= 8 && ny >= 0 && ny <= 9) {
-                const p = board[ny][nx];
-                if (p) {
-                    if (!jumped) {
-                        if (isEnemy(p)) {
-                            const k = p.toLowerCase();
-                            if (k === 'r') return true;
-                            if (k === 'k') {
-                                const d = Math.abs(nx - kx) + Math.abs(ny - ky);
-                                if (d === 1) return true;
-                            }
-                        }
-                        jumped = true;
-                    } else {
-                        if (isEnemy(p) && p.toLowerCase() === 'c') return true;
-                        break;
-                    }
-                }
-                nx += dx; ny += dy;
-            }
-        }
-        if (kingsFacing()) return true;
-
-        const knightOffsets = [
-            [1, 2, 0, 1],[-1, 2, 0, 1],[1,-2,0,-1],[-1,-2,0,-1],
-            [2, 1, 1, 0],[2,-1, 1, 0],[-2, 1,-1, 0],[-2,-1,-1, 0]
-        ];
-        for (const [dx, dy, lx, ly] of knightOffsets) {
-            const nx = kx + dx, ny = ky + dy;
-            if (nx < 0 || nx > 8 || ny < 0 || ny > 9) continue;
-            const p = board[ny][nx];
-            if (!p || !isEnemy(p)) continue;
-            if (p.toLowerCase() !== 'n') continue;
-            const legX = nx + lx, legY = ny + ly;
-            if (board[legY] && board[legY][legX]) continue;
+        // 检查当前已填的所有格是否会违反线索（部分检查）
+        // 只检查"完全用已经填好的列可以判断的线索"，避免剪枝过度
+        function partialCheck() {
+            // 简化：只检查形如 a[i][k1] === 'v1' && a[i][k2] === 'v2' 这种直接约束
+            // 其他线索（涉及 posOf、adjacent）在最后完整校验
             return true;
         }
 
-        if (side === 'red') {
-            if (ky - 1 >= 0 && board[ky - 1][kx] === 'p') return true;
-            if (kx - 1 >= 0 && board[ky][kx - 1] === 'p') return true;
-            if (kx + 1 <= 8 && board[ky][kx + 1] === 'p') return true;
-        } else {
-            if (ky + 1 <= 9 && board[ky + 1][kx] === 'P') return true;
-            if (kx - 1 >= 0 && board[ky][kx - 1] === 'P') return true;
-            if (kx + 1 <= 8 && board[ky][kx + 1] === 'P') return true;
+        // 逐列递归
+        function placeKey(keyIdx) {
+            if (solutions.length >= MAX_SOLUTIONS) return;
+            if (keyIdx === keys.length) {
+                // 所有列都填完了，校验所有线索
+                for (const c of clues) {
+                    try {
+                        if (!c(assignment)) return;
+                    } catch (e) {
+                        return;
+                    }
+                }
+                solutions.push(assignment.map(h => ({ ...h })));
+                return;
+            }
+            const key = keys[keyIdx];
+            const values = categories[key].values.slice();
+            // 生成 values 的全排列，赋给各房子
+            permuteValues(key, values, 0, () => placeKey(keyIdx + 1));
         }
-        return false;
-    }
 
-    function getLegalMoves(x, y) {
-        const p = board[y][x];
-        if (!p) return [];
-        const moves = getPseudoMoves(x, y);
-        const side = isRed(p) ? 'red' : 'black';
-        const legal = [];
-        for (const m of moves) {
-            const cap = board[m.y][m.x];
-            board[m.y][m.x] = p;
-            board[y][x] = 0;
-            const bad = isInCheck(side);
-            board[y][x] = p;
-            board[m.y][m.x] = cap;
-            if (!bad) legal.push(m);
+        function permuteValues(key, values, idx, onDone) {
+            if (solutions.length >= MAX_SOLUTIONS) return;
+            if (idx === values.length) {
+                onDone();
+                return;
+            }
+            for (let i = idx; i < values.length; i++) {
+                [values[idx], values[i]] = [values[i], values[idx]];
+                assignment[idx][key] = values[idx];
+                permuteValues(key, values, idx + 1, onDone);
+                [values[idx], values[i]] = [values[i], values[idx]];
+            }
         }
-        return legal;
+
+        placeKey(0);
+        return { solutions, count: solutions.length };
     }
 
     // ============================================================
-    // 走子
+    // 状态
     // ============================================================
-    function onClick(x, y) {
-        if (gameOver || aiThinking) return;
-        if (turn !== playerSide) return;
-        const p = board[y][x];
-        if (selected && validMoves.some(m => m.x === x && m.y === y)) {
-            doMove({ from: selected, to: { x, y } });
-            selected = null; validMoves = [];
-            render();
-            if (!gameOver) scheduleAI();
+    let currentIndex = 0;
+    let state = [];
+    let revealed = [];
+    let hintCount = 0;
+    let currentAnswer = null;
+    let locked = false;
+    let solvedCache = {}; // { puzzleIdx: {solutions, count} }
+
+    const problemEl = document.getElementById('problem');
+    const wrap = document.getElementById('tableWrap');
+    const idxLabel = document.getElementById('idxLabel');
+    const totalLabel = document.getElementById('totalLabel');
+    const titleLabel = document.getElementById('titleLabel');
+    const toastContainer = document.getElementById('toastContainer');
+    const btnHint = document.getElementById('btnHint');
+
+    function toast(text, type) {
+        const el = document.createElement('div');
+        el.className = 'toast' + (type ? ' ' + type : '');
+        el.textContent = text;
+        toastContainer.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 0.3s';
+            setTimeout(() => el.remove(), 300);
+        }, 2200);
+    }
+
+    const current = () => PUZZLES[currentIndex];
+
+    // 显示"加载中"
+    function showLoading(text) {
+        wrap.innerHTML = `<div class="zebra-loading">${text || '正在计算题目…'}</div>`;
+    }
+
+    // ============================================================
+    // 加载题目（异步两阶段：先显示 UI，再后台求解）
+    // ============================================================
+    function loadPuzzle(index) {
+        currentIndex = ((index % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
+        const p = current();
+
+        // 重置
+        state = Array.from({ length: HOUSE_COUNT }, () => {
+            const obj = {};
+            for (const k of Object.keys(p.categories)) obj[k] = '';
+            return obj;
+        });
+        revealed = Array.from({ length: HOUSE_COUNT }, () => ({}));
+        hintCount = 0;
+        locked = false;
+        currentAnswer = null;
+        btnHint.disabled = false;
+
+        idxLabel.textContent = currentIndex + 1;
+        totalLabel.textContent = PUZZLES.length;
+        titleLabel.textContent = p.title;
+
+        // 第一阶段：立刻渲染题目和空表
+        renderProblem();
+        showLoading('正在计算题目…');
+
+        // 第二阶段：下一帧再跑求解器（避免阻塞 UI 渲染）
+        setTimeout(() => {
+            const t0 = performance.now();
+            let res = solvedCache[currentIndex];
+            if (!res) {
+                res = solve(p.categories, p.clues, HOUSE_COUNT);
+                solvedCache[currentIndex] = res;
+                const dt = (performance.now() - t0).toFixed(0);
+                console.log(`[zebra] 题「${p.title}」求解完成：解数=${res.count}，耗时 ${dt}ms`);
+            }
+            if (res.count === 1) {
+                currentAnswer = res.solutions[0];
+            }
+            renderTable();
+        }, 20);
+    }
+
+    function renderProblem() {
+        const p = current();
+        let html = `<b>题目：</b>${p.intro}<br><b>线索：</b><br>`;
+        p.clueTexts.forEach((c, i) => { html += `${i + 1}. ${c}<br>`; });
+        html += `<span class="q">问题：${p.question}</span>`;
+        problemEl.innerHTML = html;
+    }
+
+    function renderTable() {
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        let html = '<table class="zebra-table"><thead><tr><th style="width:70px;">房子</th>';
+        for (const k of cats) html += `<th>${p.categories[k].label}</th>`;
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < HOUSE_COUNT; i++) {
+            html += `<tr><td><b>第 ${i + 1} 栋</b></td>`;
+            for (const k of cats) {
+                const isLocked = revealed[i][k];
+                html += `<td class="${isLocked ? 'correct' : ''}">`;
+                html += `<select data-house="${i}" data-cat="${k}" ${isLocked ? 'disabled' : ''}>`;
+                html += `<option value="">--</option>`;
+                for (const opt of p.categories[k].values) {
+                    const sel = state[i][k] === opt ? ' selected' : '';
+                    html += `<option value="${opt}"${sel}>${opt}</option>`;
+                }
+                html += `</select></td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+
+        wrap.querySelectorAll('select').forEach(sel => {
+            sel.onchange = () => {
+                if (locked) { sel.value = state[+sel.dataset.house][sel.dataset.cat]; return; }
+                const h = parseInt(sel.dataset.house, 10);
+                const c = sel.dataset.cat;
+                state[h][c] = sel.value;
+                sel.parentElement.classList.remove('wrong');
+            };
+        });
+    }
+
+    // ============================================================
+    // 检查
+    // ============================================================
+    function check() {
+        if (locked) { toast('已完成，无需再检查', 'warn'); return; }
+        const p = current();
+        const cats = Object.keys(p.categories);
+
+        for (let i = 0; i < HOUSE_COUNT; i++) {
+            for (const k of cats) {
+                if (!state[i][k]) { toast('还有格子未填写', 'warn'); return; }
+            }
+        }
+        for (const k of cats) {
+            const vals = state.map(s => s[k]);
+            if (new Set(vals).size !== HOUSE_COUNT) {
+                toast(`「${p.categories[k].label}」列有重复`, 'warn');
+                return;
+            }
+        }
+        const failed = [];
+        p.clues.forEach((fn, i) => {
+            try { if (!fn(state)) failed.push(i + 1); }
+            catch (e) { failed.push(i + 1); }
+        });
+        if (failed.length > 0) {
+            toast(`违反线索：第 ${failed.join('、')} 条`, 'error');
             return;
         }
-        if (p && ((playerSide === 'red' && isRed(p)) || (playerSide === 'black' && isBlack(p)))) {
-            selected = { x, y };
-            validMoves = getLegalMoves(x, y);
+        locked = true;
+        const t = p.target;
+        let answerText = '';
+        if (t.house >= 0) {
+            answerText = `${p.categories[t.key].label}为「${t.value}」的是第 ${t.house + 1} 栋。`;
         } else {
-            selected = null; validMoves = [];
+            const idx = currentAnswer ? currentAnswer.findIndex(h => h[t.key] === t.value) : -1;
+            answerText = `${t.value}的是第 ${idx + 1} 栋。`;
         }
-        render();
+        toast(`🎉 完全正确！${answerText}`, 'success');
     }
 
-    function doMove(mv) {
-        history.push({
-            from: { ...mv.from },
-            to: { ...mv.to },
-            captured: board[mv.to.y][mv.to.x],
-            turn
-        });
-        board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-        board[mv.from.y][mv.from.x] = 0;
-        lastMove = mv;
-        turn = turn === 'red' ? 'black' : 'red';
-        checkGameEnd();
-    }
-
-    function undo() {
-        if (history.length === 0 || aiThinking) return;
-        do {
-            const last = history.pop();
-            board[last.from.y][last.from.x] = board[last.to.y][last.to.x];
-            board[last.to.y][last.to.x] = last.captured;
-            turn = last.turn;
-            lastMove = history.length
-                ? { from: { ...history[history.length - 1].from }, to: { ...history[history.length - 1].to } }
-                : null;
-        } while (turn !== playerSide && history.length > 0);
-
-        selected = null; validMoves = []; gameOver = false;
-        endModal.classList.remove('show');
-        render();
-    }
-
-    function checkGameEnd() {
-        const kr = findKing('red'), kb = findKing('black');
-        if (!kr || !kb) {
-            gameOver = true;
-            const winnerSide = kr ? 'red' : 'black';
-            const winnerName = winnerSide === 'red' ? '红方' : '黑方';
-            const loserName = winnerSide === 'red' ? '黑方' : '红方';
-            showEndModal(`${winnerName}获胜`, `${loserName}的将/帅已被吃`);
+    // ============================================================
+    // 提示
+    // ============================================================
+    function hint() {
+        if (locked) { toast('已完成', 'warn'); return; }
+        if (hintCount >= MAX_HINTS) {
+            toast(`提示次数已用完（${MAX_HINTS} 次）`, 'warn');
+            btnHint.disabled = true;
             return;
         }
-        const side = turn;
-        const sideName = side === 'red' ? '红方' : '黑方';
-        const opponentName = side === 'red' ? '黑方' : '红方';
-
-        let hasLegal = false;
-        outer: for (let y = 0; y < 10; y++) {
-            for (let x = 0; x < 9; x++) {
-                const p = board[y][x];
-                if (!p) continue;
-                if (side === 'red' && !isRed(p)) continue;
-                if (side === 'black' && !isBlack(p)) continue;
-                if (getLegalMoves(x, y).length > 0) { hasLegal = true; break outer; }
+        if (!currentAnswer) {
+            toast('本题无唯一解，无法提示', 'warn');
+            return;
+        }
+        const p = current();
+        const cats = Object.keys(p.categories);
+        const wrongSlots = [];
+        for (let i = 0; i < HOUSE_COUNT; i++) {
+            for (const k of cats) {
+                if (state[i][k] !== currentAnswer[i][k]) wrongSlots.push({ house: i, cat: k });
             }
         }
-        if (hasLegal) return;
-
-        gameOver = true;
-        const reason = isInCheck(side) ? '被将死' : '被困毙';
-        showEndModal(`${opponentName}获胜`, `${sideName}${reason}`);
-    }
-
-    function showEndModal(title, sub) {
-        endModalTitle.textContent = title;
-        endModalSub.textContent = sub;
-        endModal.classList.add('show');
-        aiThinking = false;
-        turnLabel.textContent = '对局结束';
+        if (wrongSlots.length === 0) {
+            toast('已经全部正确，无需提示', 'warn');
+            return;
+        }
+        const slot = wrongSlots[Math.floor(Math.random() * wrongSlots.length)];
+        state[slot.house][slot.cat] = currentAnswer[slot.house][slot.cat];
+        revealed[slot.house][slot.cat] = true;
+        hintCount++;
+        toast(`💡 已揭示：第 ${slot.house + 1} 栋的「${p.categories[slot.cat].label}」（剩余 ${MAX_HINTS - hintCount} 次）`, 'success');
+        renderTable();
+        if (hintCount >= MAX_HINTS) btnHint.disabled = true;
     }
 
     // ============================================================
-    // AI
+    // 事件
     // ============================================================
-    function evaluate() {
-        let s = 0;
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            const p = board[y][x];
-            if (!p) continue;
-            const v = VALUES[p.toLowerCase()];
-            s += isRed(p) ? v : -v;
-        }
-        return s;
-    }
-
-    function getAllLegalMoves(side) {
-        const result = [];
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            const p = board[y][x];
-            if (!p) continue;
-            if (side === 'red' && !isRed(p)) continue;
-            if (side === 'black' && !isBlack(p)) continue;
-            getLegalMoves(x, y).forEach(m => result.push({ from: { x, y }, to: m }));
-        }
-        result.sort((a, b) => {
-            const pa = board[a.to.y][a.to.x];
-            const pb = board[b.to.y][b.to.x];
-            const va = pa ? VALUES[pa.toLowerCase()] : 0;
-            const vb = pb ? VALUES[pb.toLowerCase()] : 0;
-            return vb - va;
-        });
-        return result;
-    }
-
-    function boardHash() {
-        let s = '';
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) s += board[y][x] || '.';
-        return s;
-    }
-
-    function minimax(depth, alpha, beta, maximizing, transposition) {
-        if (!findKing('red')) return 999999;
-        if (!findKing('black')) return -999999;
-        if (depth === 0) return evaluate();
-
-        const key = `${depth}|${maximizing ? 'R' : 'B'}|${boardHash()}`;
-        if (transposition.has(key)) return transposition.get(key);
-
-        const side = maximizing ? 'red' : 'black';
-        const moves = getAllLegalMoves(side);
-        if (moves.length === 0) return maximizing ? -999999 : 999999;
-
-        let best;
-        if (maximizing) {
-            best = -Infinity;
-            for (const mv of moves) {
-                const cap = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-                board[mv.from.y][mv.from.x] = 0;
-                const v = minimax(depth - 1, alpha, beta, false, transposition);
-                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = cap;
-                if (v > best) best = v;
-                if (best > alpha) alpha = best;
-                if (beta <= alpha) break;
-            }
-        } else {
-            best = Infinity;
-            for (const mv of moves) {
-                const cap = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-                board[mv.from.y][mv.from.x] = 0;
-                const v = minimax(depth - 1, alpha, beta, true, transposition);
-                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = cap;
-                if (v < best) best = v;
-                if (best < beta) beta = best;
-                if (beta <= alpha) break;
-            }
-        }
-        transposition.set(key, best);
-        return best;
-    }
-
-    function scheduleAI() {
-        if (gameOver || turn === playerSide) return;
-        if (aiTimerId) clearTimeout(aiTimerId);
-        aiThinking = true;
-        turnLabel.textContent = 'AI 思考中…';
-        aiTimerId = setTimeout(() => {
-            aiTimerId = null;
-            aiPlay();
-            aiThinking = false;
-            if (!gameOver) turnLabel.textContent = turn === 'red' ? '红方' : '黑方';
-            render();
-        }, 30);
-    }
-
-    function aiPlay() {
-        if (gameOver || turn === playerSide) return;
-        const depth = parseInt(aiDepthEl.value, 10);
-        const side = turn;
-        const maximizing = side === 'red';
-        const moves = getAllLegalMoves(side);
-        if (moves.length === 0) return;
-
-        const transposition = new Map();
-        let bestVal = maximizing ? -Infinity : Infinity;
-        let bestMoves = [];
-
-        for (const mv of moves) {
-            const cap = board[mv.to.y][mv.to.x];
-            board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-            board[mv.from.y][mv.from.x] = 0;
-            const v = minimax(depth - 1, -Infinity, Infinity, !maximizing, transposition);
-            board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-            board[mv.to.y][mv.to.x] = cap;
-            if (maximizing ? v > bestVal : v < bestVal) {
-                bestVal = v;
-                bestMoves = [mv];
-            } else if (v === bestVal) {
-                bestMoves.push(mv);
-            }
-        }
-        if (bestMoves.length > 0) {
-            const mv = bestMoves[Math.floor(Math.random() * bestMoves.length)];
-            doMove(mv);
-        }
-    }
-
-    // ============================================================
-    // 生命周期
-    // ============================================================
-    function newGame() {
-        if (aiTimerId) { clearTimeout(aiTimerId); aiTimerId = null; }
-        board = JSON.parse(JSON.stringify(INIT));
-        selected = null; validMoves = [];
-        turn = 'red';
-        gameOver = false;
-        aiThinking = false;
-        lastMove = null;
-        history = [];
-        endModal.classList.remove('show');
-        playerSideEl.textContent = playerSide === 'red' ? '红方' : '黑方';
-        render();
-        if (playerSide === 'black') scheduleAI();
-    }
-
-    document.getElementById('btnNew').onclick = newGame;
-    document.getElementById('btnUndo').onclick = undo;
-    document.getElementById('btnSwap').onclick = () => {
-        if (aiTimerId) { clearTimeout(aiTimerId); aiTimerId = null; }
-        playerSide = playerSide === 'red' ? 'black' : 'red';
-        newGame();
+    document.getElementById('btnCheck').onclick = check;
+    btnHint.onclick = hint;
+    document.getElementById('btnReset').onclick = () => loadPuzzle(currentIndex);
+    document.getElementById('btnPrev').onclick = () => loadPuzzle(currentIndex - 1);
+    document.getElementById('btnNext').onclick = () => loadPuzzle(currentIndex + 1);
+    document.getElementById('btnRandom').onclick = () => {
+        if (PUZZLES.length <= 1) return;
+        let next;
+        do { next = Math.floor(Math.random() * PUZZLES.length); }
+        while (next === currentIndex);
+        loadPuzzle(next);
     };
-    btnEndNew.onclick = () => { endModal.classList.remove('show'); newGame(); };
-    btnEndClose.onclick = () => { endModal.classList.remove('show'); };
 
-    let resizeTimer = null;
-    window.addEventListener('resize', () => {
-        if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(render, 150);
+    document.addEventListener('keydown', e => {
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'select' || tag === 'input') return;
+        if (e.key === 'ArrowLeft') loadPuzzle(currentIndex - 1);
+        else if (e.key === 'ArrowRight') loadPuzzle(currentIndex + 1);
     });
 
-    playerSide = 'red';
-    buildBoardDOM();
-    newGame();
-    GameBridge.notifyReady();
+    // ============================================================
+    // 启动：立刻加载第 1 题（异步求解）
+    // 不再在启动时跑 selfTest（那会阻塞几十秒）
+    // ============================================================
+    loadPuzzle(0);
 })();
 </script>
 </body>
