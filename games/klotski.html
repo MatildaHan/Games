@@ -2,22 +2,39 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>华容道</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.klotski-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.klotski-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+}
+.klotski-info { color: var(--text-sub); font-size: 14px; text-align: center; }
+
 .klotski-board {
     position: relative;
-    width: 400px; height: 500px;
+    width: min(400px, 90vw);
+    aspect-ratio: 4 / 5;
     background: rgba(0,0,0,0.3);
     border: 3px solid rgba(255,255,255,0.4);
     border-radius: 8px;
     overflow: hidden;
+    touch-action: manipulation;
+    max-height: 60vh;
 }
 .block {
     position: absolute;
-    display: flex; justify-content: center; align-items: center;
-    font-weight: 700; font-size: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    font-size: calc(min(400px, 90vw) * 0.055);
     color: #000;
     border-radius: 6px;
     cursor: pointer;
@@ -25,9 +42,10 @@
     border: 2px solid rgba(0,0,0,0.2);
     box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15);
     user-select: none;
+    -webkit-user-select: none;
     font-family: "KaiTi", "STKaiti", serif;
 }
-.block.cao { background: #f87171; color: #fff; font-size: 22px; }
+.block.cao { background: #f87171; color: #fff; font-size: calc(min(400px, 90vw) * 0.07); }
 .block.general { background: #fbbf24; }
 .block.soldier { background: #93c5fd; }
 .block.hint {
@@ -36,7 +54,41 @@
     pointer-events: none;
     z-index: 0;
 }
-.klotski-info { color: var(--text-sub); font-size: 14px; }
+
+/* 触摸方向提示按钮 */
+.touch-dpad {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 6px;
+    width: 200px;
+    margin-top: 6px;
+}
+.dpad-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text);
+    border-radius: 10px;
+    height: 48px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: inherit;
+}
+.dpad-btn:active { background: var(--primary-mid); }
+.dpad-empty { visibility: hidden; }
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .klotski-board { width: min(340px, 88vw); max-height: 50vh; }
+    .klotski-info { font-size: 12px; }
+    .touch-dpad { display: grid; }
+}
 </style>
 </head>
 <body>
@@ -45,6 +97,16 @@
         <div class="klotski-info">目标：将「曹操」移动到最下方出口</div>
         <div id="board" class="klotski-board"></div>
         <button class="btn" id="btnReset">重新开始</button>
+
+        <!-- 手机方向键 -->
+        <div class="touch-dpad" id="dpad">
+            <div class="dpad-empty"></div>
+            <button class="dpad-btn" data-dir="up">↑</button>
+            <div class="dpad-empty"></div>
+            <button class="dpad-btn" data-dir="left">←</button>
+            <button class="dpad-btn" data-dir="down">↓</button>
+            <button class="dpad-btn" data-dir="right">→</button>
+        </div>
     </div>
 </div>
 
@@ -52,8 +114,6 @@
 <script>
 (function () {
     'use strict';
-
-    const CELL = 100;
 
     const LAYOUT = [
         { id: 'cao',   name: '曹操', x: 1, y: 0, w: 2, h: 2, type: 'cao' },
@@ -71,6 +131,13 @@
     let blocks = [];
     let selectedId = null;
     const boardEl = document.getElementById('board');
+    const dpad = document.getElementById('dpad');
+
+    function getCellSize() {
+        // 棋盘宽 = 4 格，通过容器实际宽度计算
+        const boardWidth = boardEl.clientWidth;
+        return boardWidth / 4;
+    }
 
     function reset() {
         blocks = JSON.parse(JSON.stringify(LAYOUT));
@@ -80,13 +147,14 @@
 
     function render() {
         boardEl.innerHTML = '';
+        const cell = getCellSize();
         for (const b of blocks) {
             const div = document.createElement('div');
             div.className = 'block ' + b.type;
-            div.style.left = (b.x * CELL) + 'px';
-            div.style.top = (b.y * CELL) + 'px';
-            div.style.width = (b.w * CELL - 4) + 'px';
-            div.style.height = (b.h * CELL - 4) + 'px';
+            div.style.left = (b.x * cell) + 'px';
+            div.style.top = (b.y * cell) + 'px';
+            div.style.width = (b.w * cell - 4) + 'px';
+            div.style.height = (b.h * cell - 4) + 'px';
             div.textContent = b.name;
             if (selectedId === b.id) div.style.boxShadow = '0 0 0 3px #4ade80, inset 0 -4px 0 rgba(0,0,0,0.15)';
             div.onclick = () => selectBlock(b);
@@ -98,10 +166,10 @@
                 for (const d of validDirs(b)) {
                     const hint = document.createElement('div');
                     hint.className = 'block hint';
-                    hint.style.left = ((b.x + d.dx) * CELL) + 'px';
-                    hint.style.top = ((b.y + d.dy) * CELL) + 'px';
-                    hint.style.width = (b.w * CELL - 4) + 'px';
-                    hint.style.height = (b.h * CELL - 4) + 'px';
+                    hint.style.left = ((b.x + d.dx) * cell) + 'px';
+                    hint.style.top = ((b.y + d.dy) * cell) + 'px';
+                    hint.style.width = (b.w * cell - 4) + 'px';
+                    hint.style.height = (b.h * cell - 4) + 'px';
                     boardEl.appendChild(hint);
                 }
             }
@@ -109,7 +177,11 @@
     }
 
     function selectBlock(b) {
-        if (selectedId === b.id) { selectedId = null; render(); return; }
+        if (selectedId === b.id) {
+            selectedId = null;
+            render();
+            return;
+        }
         selectedId = b.id;
         render();
     }
@@ -132,10 +204,20 @@
         return true;
     }
 
-    document.addEventListener('keydown', e => {
+    function moveSelected(dx, dy) {
         if (!selectedId) return;
         const b = blocks.find(x => x.id === selectedId);
         if (!b) return;
+        if (canMove(b, dx, dy)) {
+            b.x += dx; b.y += dy;
+            render();
+            checkWin();
+        }
+    }
+
+    // 键盘
+    document.addEventListener('keydown', e => {
+        if (!selectedId) return;
         let dx = 0, dy = 0;
         if (e.key === 'ArrowUp') dy = -1;
         else if (e.key === 'ArrowDown') dy = 1;
@@ -143,12 +225,18 @@
         else if (e.key === 'ArrowRight') dx = 1;
         else return;
         e.preventDefault();
-        if (canMove(b, dx, dy)) {
-            b.x += dx; b.y += dy;
-            selectedId = null;
-            render();
-            checkWin();
-        }
+        moveSelected(dx, dy);
+    });
+
+    // 手机方向键
+    dpad.addEventListener('click', e => {
+        const btn = e.target.closest('.dpad-btn');
+        if (!btn) return;
+        const dir = btn.dataset.dir;
+        if (dir === 'up') moveSelected(0, -1);
+        else if (dir === 'down') moveSelected(0, 1);
+        else if (dir === 'left') moveSelected(-1, 0);
+        else if (dir === 'right') moveSelected(1, 0);
     });
 
     function checkWin() {
@@ -158,8 +246,19 @@
         }
     }
 
+    // 窗口大小变化时重绘
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(render, 200);
+    });
+
     document.getElementById('btnReset').onclick = reset;
-    reset();
+
+    // 初始化（等布局稳定后再获取宽度）
+    requestAnimationFrame(() => {
+        reset();
+    });
     GameBridge.notifyReady();
 })();
 </script>
