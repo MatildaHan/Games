@@ -6,38 +6,65 @@
 <title>中国象棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-/* ---------- 布局 ---------- */
 .chess-layout {
     display: grid;
     grid-template-columns: auto 200px;
-    gap: 24px;
+    gap: 20px;
     align-items: flex-start;
     justify-content: center;
     width: 100%;
-    height: 100%;
 }
 .chess-board-wrap {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
 }
 .chess-board {
     display: grid;
     grid-template-columns: repeat(9, var(--cell, 52px));
     grid-template-rows: repeat(10, var(--cell, 52px));
     background: #e8d8b0;
-    border: 3px solid #7a5a3a;
-    border-radius: 6px;
+    border: 2px solid #7a5a3a;
+    border-radius: 4px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     position: relative;
     touch-action: manipulation;
+}
+/* 棋盘线（用背景网格实现） */
+.chess-board::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(0,0,0,0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.35) 1px, transparent 1px);
+    background-size: var(--cell) var(--cell);
+    background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);
+    pointer-events: none;
+}
+/* 楚河汉界区域留白（第 5 行下沿） */
+.chess-board::after {
+    content: '楚 河            汉 界';
+    position: absolute;
+    left: 0; right: 0;
+    top: calc(var(--cell) * 4.5);
+    height: var(--cell);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12%;
+    font-family: "KaiTi", "STKaiti", serif;
+    font-size: calc(var(--cell) * 0.4);
+    color: rgba(80, 50, 20, 0.7);
+    letter-spacing: 4px;
+    pointer-events: none;
+    user-select: none;
 }
 .chess-cell {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: calc(var(--cell, 52px) * 0.6);
+    font-size: calc(var(--cell, 52px) * 0.58);
     font-weight: 700;
     cursor: pointer;
     user-select: none;
@@ -45,24 +72,31 @@
     color: #333;
     position: relative;
     font-family: "KaiTi", "STKaiti", serif;
+    z-index: 1;
 }
 .chess-cell.red { color: #c0392b; }
 .chess-cell.black { color: #2c3e50; }
-.chess-cell.selected { background: rgba(74,222,128,0.5); border-radius: 50%; }
+.chess-cell.selected {
+    background: rgba(74,222,128,0.5);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--primary);
+}
 .chess-cell.valid::after {
     content: '';
     position: absolute;
-    width: calc(var(--cell, 52px) * 0.28);
-    height: calc(var(--cell, 52px) * 0.28);
+    width: calc(var(--cell, 52px) * 0.3);
+    height: calc(var(--cell, 52px) * 0.3);
     border-radius: 50%;
-    background: rgba(74,222,128,0.75);
+    border: 3px solid rgba(74,222,128,0.9);
+    background: transparent;
+    pointer-events: none;
+}
+.chess-cell.lastmove {
+    background: rgba(250,204,21,0.35);
+    border-radius: 50%;
 }
 
-.chess-side {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+.chess-side { display: flex; flex-direction: column; gap: 10px; }
 .chess-side .card { font-size: 13px; }
 .chess-side .card b { color: var(--primary); }
 .chess-side select {
@@ -79,25 +113,16 @@
     min-height: 40px;
 }
 
-/* ---------- 平板 ---------- */
 @media (max-width: 1023px) {
-    .chess-layout {
-        grid-template-columns: auto 170px;
-        gap: 16px;
-    }
-    .chess-board { --cell: 44px; }
+    .chess-layout { grid-template-columns: auto 170px; gap: 14px; }
 }
-
-/* ---------- 手机 ---------- */
 @media (max-width: 767px) {
     .chess-layout {
         grid-template-columns: 1fr;
         gap: 12px;
         align-items: center;
         justify-items: center;
-        height: auto;
     }
-    .chess-board { --cell: min(10vw, 38px); }
     .chess-side {
         flex-direction: row;
         flex-wrap: wrap;
@@ -105,22 +130,13 @@
         width: 100%;
         gap: 8px;
     }
-    .chess-side .card {
-        flex: 1 1 100%;
-        padding: 10px;
-        font-size: 12px;
-    }
+    .chess-side .card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
     .chess-side select { font-size: 12px; padding: 6px; min-height: 36px; }
     .chess-side .btn { flex: 1 1 45%; font-size: 13px; }
 }
-
-/* ---------- 横屏手机：棋盘占满 ---------- */
-@media (max-width: 900px) and (orientation: landscape) {
-    .chess-board { --cell: min(7.5vh, 40px); }
-}
 </style>
 </head>
-<body>
+<body class="embedded">
 <div class="game-inner">
     <div class="chess-layout">
         <div class="chess-board-wrap">
@@ -141,10 +157,11 @@
                 </select>
             </div>
             <button class="btn" id="btnNew">新对局</button>
+            <button class="btn ghost" id="btnUndo">悔棋</button>
             <button class="btn ghost" id="btnSwap">切换先手</button>
             <div class="card" style="font-size:12px; line-height:1.7; color: var(--text-sub);">
                 <div class="card-title">操作</div>
-                点击己方棋子 → 点击绿点落子
+                点击己方棋子 → 点击绿圈落子
             </div>
         </div>
     </div>
@@ -154,6 +171,8 @@
 <script>
 (function () {
     'use strict';
+
+    document.body.classList.add('embedded');
 
     const INIT = [
         ['r','n','b','a','k','a','b','n','r'],
@@ -172,10 +191,11 @@
         K:'帅', A:'仕', B:'相', N:'马', R:'车', C:'炮', P:'兵',
         k:'将', a:'士', b:'象', n:'马', r:'车', c:'炮', p:'卒'
     };
-
     const VALUES = { k: 10000, r: 900, n: 400, c: 450, a: 200, b: 200, p: 100 };
 
     let board, playerSide, turn, selected, validMoves, gameOver, aiThinking;
+    let lastMove = null; // {from:{x,y}, to:{x,y}}
+    let history = [];     // 悔棋用
 
     const boardEl = document.getElementById('board');
     const turnLabel = document.getElementById('turnLabel');
@@ -186,21 +206,40 @@
     const isBlack = p => p && p === p.toLowerCase();
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
+    // ---------- 棋盘尺寸 ----------
+    function calcCellSize() {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        // 桌面：60px 以内；手机：<= 40px
+        const availW = Math.min(vw - 60, 560);
+        const availH = vh - 220;
+        const byW = Math.floor((availW - 10) / 9);
+        const byH = Math.floor((availH - 10) / 10);
+        const size = Math.min(byW, byH, 52);
+        return Math.max(26, size);
+    }
+
     function render() {
+        const cell = calcCellSize();
+        boardEl.style.setProperty('--cell', cell + 'px');
         boardEl.innerHTML = '';
         for (let y = 0; y < 10; y++) {
             for (let x = 0; x < 9; x++) {
-                const cell = document.createElement('div');
-                cell.className = 'chess-cell';
+                const el = document.createElement('div');
+                el.className = 'chess-cell';
                 const p = board[y][x];
                 if (p) {
-                    cell.textContent = NAMES[p];
-                    cell.classList.add(isRed(p) ? 'red' : 'black');
+                    el.textContent = NAMES[p];
+                    el.classList.add(isRed(p) ? 'red' : 'black');
                 }
-                if (selected && selected.x === x && selected.y === y) cell.classList.add('selected');
-                if (validMoves.some(m => m.x === x && m.y === y)) cell.classList.add('valid');
-                cell.onclick = () => onClick(x, y);
-                boardEl.appendChild(cell);
+                if (selected && selected.x === x && selected.y === y) el.classList.add('selected');
+                if (validMoves.some(m => m.x === x && m.y === y)) el.classList.add('valid');
+                if (lastMove && ((lastMove.from.x === x && lastMove.from.y === y) ||
+                                  (lastMove.to.x === x && lastMove.to.y === y))) {
+                    el.classList.add('lastmove');
+                }
+                el.onclick = () => onClick(x, y);
+                boardEl.appendChild(el);
             }
         }
         if (!aiThinking) {
@@ -208,7 +247,8 @@
         }
     }
 
-    function getMoves(x, y) {
+    // ---------- 走子规则 ----------
+    function getPseudoMoves(x, y) {
         const p = board[y][x];
         if (!p) return [];
         const moves = [];
@@ -299,12 +339,70 @@
         return moves;
     }
 
+    // ---------- 找将/帅位置 ----------
+    function findKing(side) {
+        const target = side === 'red' ? 'K' : 'k';
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
+            if (board[y][x] === target) return { x, y };
+        }
+        return null;
+    }
+
+    // ---------- 将帅对面检查 ----------
+    function kingsFacing() {
+        const kr = findKing('red'), kb = findKing('black');
+        if (!kr || !kb) return false;
+        if (kr.x !== kb.x) return false;
+        for (let y = Math.min(kr.y, kb.y) + 1; y < Math.max(kr.y, kb.y); y++) {
+            if (board[y][kr.x]) return false;
+        }
+        return true;
+    }
+
+    // ---------- 某方是否被将军 ----------
+    function isInCheck(side) {
+        const king = findKing(side);
+        if (!king) return true;
+        // 遍历对方所有棋子，看能否吃到将
+        const enemy = side === 'red' ? 'black' : 'red';
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
+            const p = board[y][x];
+            if (!p) continue;
+            if (enemy === 'red' && !isRed(p)) continue;
+            if (enemy === 'black' && !isBlack(p)) continue;
+            const ms = getPseudoMoves(x, y);
+            if (ms.some(m => m.x === king.x && m.y === king.y)) return true;
+        }
+        // 将帅对面
+        return kingsFacing();
+    }
+
+    // ---------- 过滤非法走法（走完后自己不能被将军） ----------
+    function getLegalMoves(x, y) {
+        const p = board[y][x];
+        if (!p) return [];
+        const moves = getPseudoMoves(x, y);
+        const side = isRed(p) ? 'red' : 'black';
+        const legal = [];
+        for (const m of moves) {
+            const cap = board[m.y][m.x];
+            board[m.y][m.x] = p;
+            board[y][x] = 0;
+            const bad = isInCheck(side);
+            board[y][x] = p;
+            board[m.y][m.x] = cap;
+            if (!bad) legal.push(m);
+        }
+        return legal;
+    }
+
+    // ---------- 走子 ----------
     function onClick(x, y) {
         if (gameOver || aiThinking) return;
         if (turn !== playerSide) return;
         const p = board[y][x];
         if (selected && validMoves.some(m => m.x === x && m.y === y)) {
-            applyMove({ from: selected, to: { x, y } });
+            doMove({ from: selected, to: { x, y } });
             selected = null; validMoves = [];
             render();
             if (!gameOver) scheduleAI();
@@ -312,148 +410,58 @@
         }
         if (p && ((playerSide === 'red' && isRed(p)) || (playerSide === 'black' && isBlack(p)))) {
             selected = { x, y };
-            validMoves = getMoves(x, y);
+            validMoves = getLegalMoves(x, y);
         } else {
             selected = null; validMoves = [];
         }
         render();
     }
 
-    function applyMove(mv) {
+    function doMove(mv) {
+        history.push({
+            from: { ...mv.from },
+            to: { ...mv.to },
+            captured: board[mv.to.y][mv.to.x],
+            turn
+        });
         board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
         board[mv.from.y][mv.from.x] = 0;
+        lastMove = mv;
         turn = turn === 'red' ? 'black' : 'red';
         checkGameEnd();
     }
 
+    function undo() {
+        if (history.length === 0 || aiThinking) return;
+        // 至少要撤销到玩家回合
+        const last = history.pop();
+        board[last.from.y][last.from.x] = board[last.to.y][last.to.x];
+        board[last.to.y][last.to.x] = last.captured;
+        turn = last.turn;
+        lastMove = history.length ? { from: history[history.length - 1].from, to: history[history.length - 1].to } : null;
+        selected = null; validMoves = []; gameOver = false;
+        render();
+        // 如果撤销后是 AI 回合（即撤销了两步后），让 AI 走
+        // 简化：撤销一步，若还不是玩家回合，再撤销一步
+        if (turn !== playerSide && history.length > 0) {
+            undo();
+        }
+    }
+
     function checkGameEnd() {
-        let redKing = false, blackKing = false;
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            if (board[y][x] === 'K') redKing = true;
-            if (board[y][x] === 'k') blackKing = true;
-        }
-        if (!redKing || !blackKing) {
+        // 找将/帅
+        const kr = findKing('red'), kb = findKing('black');
+        if (!kr || !kb) {
             gameOver = true;
-            const winner = redKing ? '红方' : '黑方';
+            const winner = kr ? '红方' : '黑方';
             setTimeout(() => alert(`${winner}获胜！`), 100);
+            return;
         }
-    }
-
-    function evaluate() {
-        let s = 0;
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
-            const p = board[y][x];
-            if (!p) continue;
-            const v = VALUES[p.toLowerCase()];
-            s += isRed(p) ? v : -v;
-        }
-        return s;
-    }
-
-    function getAllMoves(side) {
-        const result = [];
-        for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
+        // 当前回合方是否有合法走法
+        const side = turn;
+        let hasLegal = false;
+        for (let y = 0; y < 10 && !hasLegal; y++) for (let x = 0; x < 9; x++) {
             const p = board[y][x];
             if (!p) continue;
             if (side === 'red' && !isRed(p)) continue;
-            if (side === 'black' && !isBlack(p)) continue;
-            getMoves(x, y).forEach(m => result.push({ from: { x, y }, to: m }));
-        }
-        return result;
-    }
-
-    function minimax(depth, alpha, beta, maximizing) {
-        if (depth === 0) return evaluate();
-        const side = maximizing ? 'red' : 'black';
-        const moves = getAllMoves(side);
-        if (moves.length === 0) return maximizing ? -999999 : 999999;
-        if (maximizing) {
-            let best = -Infinity;
-            for (const mv of moves) {
-                const cap = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-                board[mv.from.y][mv.from.x] = 0;
-                const v = minimax(depth - 1, alpha, beta, false);
-                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = cap;
-                best = Math.max(best, v);
-                alpha = Math.max(alpha, v);
-                if (beta <= alpha) break;
-            }
-            return best;
-        } else {
-            let best = Infinity;
-            for (const mv of moves) {
-                const cap = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-                board[mv.from.y][mv.from.x] = 0;
-                const v = minimax(depth - 1, alpha, beta, true);
-                board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-                board[mv.to.y][mv.to.x] = cap;
-                best = Math.min(best, v);
-                beta = Math.min(beta, v);
-                if (beta <= alpha) break;
-            }
-            return best;
-        }
-    }
-
-    function scheduleAI() {
-        if (gameOver || turn === playerSide) return;
-        aiThinking = true;
-        turnLabel.textContent = 'AI 思考中…';
-        setTimeout(() => {
-            aiPlay();
-            aiThinking = false;
-            render();
-        }, 30);
-    }
-
-    function aiPlay() {
-        if (gameOver || turn === playerSide) return;
-        const depth = parseInt(aiDepthEl.value, 10);
-        const side = turn;
-        const maximizing = side === 'red';
-        const moves = getAllMoves(side);
-        if (moves.length === 0) return;
-
-        let bestMv = null;
-        let bestVal = maximizing ? -Infinity : Infinity;
-        for (const mv of moves) {
-            const cap = board[mv.to.y][mv.to.x];
-            board[mv.to.y][mv.to.x] = board[mv.from.y][mv.from.x];
-            board[mv.from.y][mv.from.x] = 0;
-            const v = minimax(depth - 1, -Infinity, Infinity, !maximizing);
-            board[mv.from.y][mv.from.x] = board[mv.to.y][mv.to.x];
-            board[mv.to.y][mv.to.x] = cap;
-            if (maximizing ? v > bestVal : v < bestVal) {
-                bestVal = v; bestMv = mv;
-            }
-        }
-        if (bestMv) applyMove(bestMv);
-    }
-
-    function newGame() {
-        board = JSON.parse(JSON.stringify(INIT));
-        selected = null; validMoves = [];
-        turn = 'red';
-        gameOver = false;
-        aiThinking = false;
-        playerSideEl.textContent = playerSide === 'red' ? '红方' : '黑方';
-        render();
-        if (playerSide === 'black') scheduleAI();
-    }
-
-    document.getElementById('btnNew').onclick = newGame;
-    document.getElementById('btnSwap').onclick = () => {
-        playerSide = playerSide === 'red' ? 'black' : 'red';
-        newGame();
-    };
-
-    playerSide = 'red';
-    newGame();
-    GameBridge.notifyReady();
-})();
-</script>
-</body>
-</html>
+            if (side
