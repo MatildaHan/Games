@@ -17,7 +17,7 @@
 .chess-board-wrap { display: flex; justify-content: center; align-items: center; }
 
 /* ============================================================
-   棋盘：灰绿石纹 + 双层边框
+   棋盘
    ============================================================ */
 .chess-board {
     position: relative;
@@ -72,7 +72,7 @@
     opacity: 0.55;
 }
 
-/* 内圈描线（米黄） */
+/* 内圈描线 */
 .chess-board::after {
     content: '';
     position: absolute;
@@ -82,6 +82,23 @@
     pointer-events: none;
     z-index: 0;
 }
+
+/* 九宫斜线：用 data URI 背景，不受 --cell 初始化影响 */
+.chess-board .palace-top,
+.chess-board .palace-bottom {
+    position: absolute;
+    width: calc(var(--cell) * 3);
+    height: calc(var(--cell) * 3);
+    left: calc(var(--cell) * 3);
+    pointer-events: none;
+    z-index: 2;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><line x1='0' y1='0' x2='100' y2='100' stroke='%236a7258' stroke-width='1.5' vector-effect='non-scaling-stroke'/><line x1='100' y1='0' x2='0' y2='100' stroke='%236a7258' stroke-width='1.5' vector-effect='non-scaling-stroke'/></svg>");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    opacity: 0.8;
+}
+.chess-board .palace-top { top: 0; }
+.chess-board .palace-bottom { bottom: 0; }
 
 /* 楚河汉界 */
 .chess-river {
@@ -99,32 +116,14 @@
     color: #4a5340;
     pointer-events: none;
     user-select: none;
-    z-index: 1;
+    z-index: 2;
     font-weight: 700;
     letter-spacing: 0.15em;
     text-shadow: 0 1px 0 rgba(255,255,255,0.45);
 }
 
-/* 九宫斜线 */
-.chess-palace {
-    position: absolute;
-    width: calc(var(--cell) * 3);
-    height: calc(var(--cell) * 3);
-    pointer-events: none;
-    z-index: 1;
-}
-.chess-palace.top { top: 0; left: calc(var(--cell) * 3); }
-.chess-palace.bottom { bottom: 0; left: calc(var(--cell) * 3); }
-.chess-palace svg { width: 100%; height: 100%; display: block; }
-.chess-palace line {
-    stroke: #6a7258;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    opacity: 0.75;
-}
-
 /* ============================================================
-   棋子：竹木圆盘 + 立体阴影 + 内圈描线
+   棋子
    ============================================================ */
 .chess-cell {
     position: relative;
@@ -164,7 +163,6 @@
         inset 0 -3px 6px rgba(140, 100, 30, 0.35);
 }
 
-/* 棋子外圈描线 */
 .chess-piece::before {
     content: '';
     position: absolute;
@@ -172,7 +170,6 @@
     border-radius: 50%;
     pointer-events: none;
 }
-/* 内圈细线 */
 .chess-piece::after {
     content: '';
     position: absolute;
@@ -183,25 +180,20 @@
     pointer-events: none;
 }
 
-.chess-cell.red .chess-piece {
-    color: #b81c1c;
-}
+.chess-cell.red .chess-piece { color: #b81c1c; }
 .chess-cell.red .chess-piece::before {
     box-shadow:
         inset 0 0 0 2px #9a4030,
         inset 0 0 0 4px #c7a566;
 }
 
-.chess-cell.black .chess-piece {
-    color: #1a1a1a;
-}
+.chess-cell.black .chess-piece { color: #1a1a1a; }
 .chess-cell.black .chess-piece::before {
     box-shadow:
         inset 0 0 0 2px #2c2c2c,
         inset 0 0 0 4px #c7a566;
 }
 
-/* 选中 */
 .chess-cell.selected .chess-piece {
     transform: translateY(-2px) scale(1.06);
     box-shadow:
@@ -212,7 +204,6 @@
         0 0 0 3px rgba(212, 175, 55, 0.85);
 }
 
-/* 可落子点 */
 .chess-cell.valid::after {
     content: '';
     position: absolute;
@@ -231,7 +222,6 @@
     50% { transform: scale(1.15); opacity: 1; }
 }
 
-/* 上一步 */
 .chess-cell.lastmove .chess-piece {
     box-shadow:
         0 4px 8px rgba(0,0,0,0.45),
@@ -241,7 +231,6 @@
         0 0 0 3px rgba(255, 200, 60, 0.85);
 }
 
-/* 手机端 */
 @media (max-width: 767px) {
     .chess-board {
         border-width: 4px;
@@ -307,19 +296,9 @@
             <div id="board" class="chess-board">
                 <!-- 楚河汉界 -->
                 <div class="chess-river"><span>楚河</span><span>汉界</span></div>
-                <!-- 九宫斜线 -->
-                <div class="chess-palace top">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line x1="0" y1="0" x2="100" y2="100" />
-                        <line x1="100" y1="0" x2="0" y2="100" />
-                    </svg>
-                </div>
-                <div class="chess-palace bottom">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line x1="0" y1="0" x2="100" y2="100" />
-                        <line x1="100" y1="0" x2="0" y2="100" />
-                    </svg>
-                </div>
+                <!-- 九宫斜线（用 background 画） -->
+                <div class="palace-top"></div>
+                <div class="palace-bottom"></div>
             </div>
         </div>
         <div class="chess-side">
@@ -404,9 +383,6 @@
     const isBlack = p => p && p === p.toLowerCase();
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
-    // ============================================================
-    // 棋盘尺寸
-    // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.chess-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
@@ -419,9 +395,6 @@
         return Math.max(24, Math.min(byW, byH, 56));
     }
 
-    // ============================================================
-    // 构建棋盘 DOM（保留装饰元素）
-    // ============================================================
     let cellEls = null;
 
     function buildBoardDOM() {
@@ -475,9 +448,6 @@
         }
     }
 
-    // ============================================================
-    // 走子规则
-    // ============================================================
     function getPseudoMoves(x, y) {
         const p = board[y][x];
         if (!p) return [];
@@ -569,9 +539,6 @@
         return moves;
     }
 
-    // ============================================================
-    // 快速 isInCheck
-    // ============================================================
     function findKing(side) {
         const target = side === 'red' ? 'K' : 'k';
         for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
@@ -671,9 +638,6 @@
         return legal;
     }
 
-    // ============================================================
-    // 走子
-    // ============================================================
     function onClick(x, y) {
         if (gameOver || aiThinking) return;
         if (turn !== playerSide) return;
@@ -764,9 +728,6 @@
         turnLabel.textContent = '对局结束';
     }
 
-    // ============================================================
-    // AI
-    // ============================================================
     function evaluate() {
         let s = 0;
         for (let y = 0; y < 10; y++) for (let x = 0; x < 9; x++) {
@@ -893,9 +854,6 @@
         }
     }
 
-    // ============================================================
-    // 生命周期
-    // ============================================================
     function newGame() {
         if (aiTimerId) { clearTimeout(aiTimerId); aiTimerId = null; }
         board = JSON.parse(JSON.stringify(INIT));
