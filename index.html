@@ -16,6 +16,7 @@
         <button class="nav-btn" data-game="sudoku" aria-pressed="false">数独</button>
         <button class="nav-btn" data-game="nonogram" aria-pressed="false">数织</button>
         <button class="nav-btn" data-game="chess" aria-pressed="false">象棋</button>
+        <button class="nav-btn" data-game="gomoku" aria-pressed="false">五子棋</button>
         <button class="nav-btn" data-game="klotski" aria-pressed="false">华容道</button>
         <button class="nav-btn" data-game="minesweeper" aria-pressed="false">扫雷</button>
         <button class="nav-btn" data-game="lightsout" aria-pressed="false">灭灯</button>
@@ -62,6 +63,7 @@
     justify-content: center;
     background: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 6;
 }
 .error-overlay[hidden] { display: none; }
@@ -82,7 +84,10 @@
 (function () {
     'use strict';
 
-    const GAMES = ['tetris','sudoku','nonogram','chess','klotski','minesweeper','lightsout','graphcoloring','zebra'];
+    const GAMES = [
+        'tetris','sudoku','nonogram','chess','gomoku',
+        'klotski','minesweeper','lightsout','graphcoloring','zebra'
+    ];
     const STORAGE_KEY = 'gameHub.lastGame';
     const frame = document.getElementById('gameFrame');
     const buttons = document.querySelectorAll('.nav-btn');
@@ -104,11 +109,10 @@
         return 'tetris';
     }
 
-    // ---------- 显示/隐藏加载态 ----------
+    // ---------- 加载态 ----------
     function showLoading() {
         loadingEl.classList.add('show');
         clearTimeout(loadingTimer);
-        // 3 秒还没加载完，显示错误
         loadingTimer = setTimeout(() => {
             if (loadingEl.classList.contains('show')) {
                 showError('加载超时，请检查网络或重试');
@@ -119,7 +123,6 @@
         loadingEl.classList.remove('show');
         clearTimeout(loadingTimer);
     }
-
     function showError(msg) {
         errorMsg.textContent = msg;
         errorOverlay.hidden = false;
@@ -144,13 +147,12 @@
             b.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
 
-        // 用 location.replace 而不是 frame.src，避免污染 session history
         showLoading();
         hideError();
+        // 用 location.replace 避免污染 session history
         try {
             frame.contentWindow.location.replace(`games/${game}.html`);
         } catch (e) {
-            // 首次加载，contentWindow.location 还不存在，回退到 src
             frame.src = `games/${game}.html`;
         }
 
@@ -164,7 +166,6 @@
     // ---------- iframe 事件 ----------
     frame.addEventListener('load', () => {
         hideLoading();
-        // 让键盘类游戏立即能响应按键
         try { frame.contentWindow.focus(); } catch (e) {}
     });
     frame.addEventListener('error', () => {
@@ -186,12 +187,10 @@
         }
     });
 
-    // ---------- 页面可见性：切到后台时通知 iframe 暂停 ----------
+    // ---------- 页面可见性 ----------
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             GameBridge.notifyPause(frame);
-        } else {
-            // 恢复由用户主动切游戏触发，这里不强推 resume，避免误恢复
         }
     });
 
@@ -205,7 +204,6 @@
 
     // ---------- 启动 ----------
     const initial = pickInitialGame();
-    // 先把按钮设对，再触发 switch
     buttons.forEach(b => {
         const active = b.dataset.game === initial;
         b.classList.toggle('active', active);
