@@ -13,7 +13,6 @@
    像素复古主题：全部用 .px-theme 作用域，避免污染其他游戏
    ============================================================ */
 
-/* 只在 .px-theme 下使用像素字体 */
 .px-theme,
 .px-theme * {
     font-family: "Press Start 2P", "Courier New", monospace;
@@ -23,17 +22,14 @@
     image-rendering: crisp-edges;
 }
 
-/* ============================================================
-   像素主题背景（只在 .px-theme 上生效）
-   ============================================================ */
+/* 像素主题背景 */
 .px-theme.game-inner {
     background:
         radial-gradient(ellipse at center, #1a2140 0%, #0b0e1a 70%),
         #0b0e1a;
-    /* 保持与 common.css 的 padding 一致 */
     padding: 16px;
+    position: relative;
 }
-/* 网格背景 */
 .px-theme.game-inner::before {
     content: '';
     position: absolute;
@@ -45,7 +41,6 @@
     background-size: 32px 32px;
     pointer-events: none;
 }
-/* CRT 扫描线 */
 .px-theme.game-inner::after {
     content: '';
     position: absolute;
@@ -61,15 +56,12 @@
     );
     opacity: 0.35;
 }
-/* 内容层要在背景之上 */
 .px-theme .tetris-layout {
     position: relative;
     z-index: 2;
 }
 
-/* ============================================================
-   色板
-   ============================================================ */
+/* 色板 */
 .px-theme {
     --px-bg:        #0b0e1a;
     --px-panel:     #1a2140;
@@ -82,11 +74,11 @@
 }
 
 /* ============================================================
-   布局：flex（与其他游戏一致）
+   布局：flex + 允许换行
    ============================================================ */
 .px-theme .tetris-layout {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;                /* ← 关键：允许换行 */
     gap: 24px;
     align-items: flex-start;
     justify-content: center;
@@ -262,8 +254,7 @@
    ============================================================ */
 @media (max-width: 1023px) {
     .px-theme .tetris-layout {
-        flex-wrap: wrap;
-        gap: 16px;
+        gap: 16px;    /* flex-wrap 已在基础样式 */
     }
 }
 
@@ -301,7 +292,7 @@
 }
 
 /* ============================================================
-   像素模态框（只在 .px-theme 的 modal 上生效）
+   像素模态框
    ============================================================ */
 .px-theme .modal-box {
     background: var(--px-panel);
@@ -341,7 +332,6 @@
 </style>
 </head>
 <body class="embedded">
-<!-- 关键：在 game-inner 上加 px-theme 类，把像素风作用域限制在这里 -->
 <div class="game-inner px-theme">
     <div class="tetris-layout">
         <div class="tetris-side">
@@ -386,7 +376,6 @@
     </div>
 </div>
 
-<!-- 模态框需要在 px-theme 下才能用像素样式，所以在 wrapper 里加 px-theme -->
 <div class="modal px-theme" id="modal">
     <div class="modal-box">
         <h2 id="modalTitle">GAME OVER</h2>
