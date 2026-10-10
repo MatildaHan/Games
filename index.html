@@ -27,6 +27,32 @@
     </main>
 </div>
 
-<script src="js/router.js"></script>
+<script>
+    // ==========================================
+    // 游戏切换路由（内联，避免外部 JS 加载失败）
+    // ==========================================
+    (function () {
+        const gameFrame = document.getElementById('gameFrame');
+        const navButtons = document.querySelectorAll('.nav-btn');
+
+        console.log('路由初始化：找到', navButtons.length, '个按钮');
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const game = btn.dataset.game;
+                console.log('切换到游戏：', game);
+
+                // 更新按钮激活状态
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // 切换 iframe 内容
+                if (gameFrame) {
+                    gameFrame.src = `games/${game}.html`;
+                }
+            });
+        });
+    })();
+</script>
 </body>
 </html>
