@@ -7,14 +7,14 @@
 <style>
 .gc-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .gc-info { color: var(--text-sub); font-size: 14px; }
-.gc-info b { color: var(--primary-color); }
+.gc-info b { color: var(--primary); }
 .gc-canvas-wrap { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 12px; }
-canvas { display: block; cursor: pointer; }
-.color-picker { display: flex; gap: 8px; }
+.gc-canvas-wrap canvas { display: block; cursor: pointer; border-radius: 6px; }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 500px; }
 .color-swatch {
     width: 40px; height: 40px; border-radius: 8px;
     cursor: pointer; border: 3px solid transparent;
-    transition: all 0.2s;
+    transition: all 0.15s;
 }
 .color-swatch.active { border-color: #fff; transform: scale(1.1); }
 </style>
@@ -22,137 +22,204 @@ canvas { display: block; cursor: pointer; }
 <body>
 <div class="game-inner">
     <div class="gc-wrap">
-        <div class="gc-info">目标：给所有区域着色，相邻区域颜色不能相同。已用颜色：<b id="colorCount">0</b></div>
-        <div class="gc-canvas-wrap"><canvas id="gcCanvas" width="600" height="400"></canvas></div>
-        <div class="color-picker" id="colorPicker"></div>
-        <div style="display:flex; gap:12px;">
-            <button class="action-btn" id="btnNew">新地图</button>
+        <div class="gc-info">
+            目标：给所有区域着色，相邻区域颜色不能相同。已用颜色 <b id="colorCount">0</b>
         </div>
+        <div class="gc-canvas-wrap">
+            <canvas id="gcCanvas" width="600" height="400"></canvas>
+        </div>
+        <div class="color-picker" id="colorPicker"></div>
+        <button class="btn" id="btnNew">新地图</button>
     </div>
 </div>
+
+<script src="../js/bridge.js"></script>
 <script>
-const COLORS = ['#f87171','#60a5fa','#4ade80','#fbbf24','#a78bfa','#f472b6','#22d3ee','#fb923c'];
-let currentColor = 0;
-let regions = []; // {points:[], color: -1, label}
-let canvas, ctx;
+(function () {
+    'use strict';
 
-// 通过 Voronoi 图生成相邻区域
-function generateMap() {
-    const n = 8 + Math.floor(Math.random() * 5); // 8-12 个区域
-    const seeds = [];
-    for (let i = 0; i < n; i++) {
-        seeds.push({
-            x: 50 + Math.random() * 500,
-            y: 50 + Math.random() * 300,
-        });
+    const COLORS = [
+        '#f87171','#60a5fa','#4ade80','#fbbf24','#a78bfa',
+        '#f472b6','#22d3ee','#fb923c','#facc15','#34d399'
+    ];
+
+    let currentColor = 0;
+    let regions = [];      // { seed: {x, y}, color: -1, label }
+    let adjacency = new Set(); // "i,j" (i<j) 真实共享边
+    let canvas, ctx;
+
+    function hexToRgb(hex) {
+        const v = parseInt(hex.slice(1), 16);
+        return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
     }
-    regions = seeds.map((s, i) => ({ seed: s, color: -1, label: i }));
-}
 
-function computeVoronoi() {
-    // 简化：采样每 4 像素判断归属
-    const imgData = ctx.createImageData(canvas.width, canvas.height);
-    for (let y = 0; y < canvas.height; y += 2) {
-        for (let x = 0; x < canvas.width; x += 2) {
-            let nearest = 0, minD = Infinity;
-            regions.forEach((r, i) => {
-                const d = (r.seed.x - x) ** 2 + (r.seed.y - y) ** 2;
-                if (d < minD) { minD = d; nearest = i; }
+    function nearestRegion(x, y) {
+        let best = 0, minD = Infinity;
+        for (let i = 0; i < regions.length; i++) {
+            const s = regions[i].seed;
+            const d = (s.x - x) ** 2 + (s.y - y) ** 2;
+            if (d < minD) { minD = d; best = i; }
+        }
+        return best;
+    }
+
+    function generateMap() {
+        const n = 8 + Math.floor(Math.random() * 5); // 8-12 区域
+        regions = [];
+        for (let i = 0; i < n; i++) {
+            regions.push({
+                seed: {
+                    x: 60 + Math.random() * (canvas.width - 120),
+                    y: 60 + Math.random() * (canvas.height - 120)
+                },
+                color: -1,
+                label: i + 1
             });
-            for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
-                const idx = ((y+dy) * canvas.width + (x+dx)) * 4;
-                const c = regions[nearest].color >= 0 ? hexToRgb(COLORS[regions[nearest].color]) : [50, 60, 80];
-                imgData.data[idx] = c[0]; imgData.data[idx+1] = c[1];
-                imgData.data[idx+2] = c[2]; imgData.data[idx+3] = 255;
+        }
+        computeAdjacency();
+    }
+
+    // 通过扫描像素的真实相邻关系（非种子距离近似）
+    function computeAdjacency() {
+        adjacency = new Set();
+        const step = 4;
+        for (let y = 0; y < canvas.height; y += step) {
+            for (let x = 0; x < canvas.width; x += step) {
+                const a = nearestRegion(x, y);
+                if (x + step < canvas.width) {
+                    const b = nearestRegion(x + step, y);
+                    if (a !== b) {
+                        const key = a < b ? `${a},${b}` : `${b},${a}`;
+                        adjacency.add(key);
+                    }
+                }
+                if (y + step < canvas.height) {
+                    const b = nearestRegion(x, y + step);
+                    if (a !== b) {
+                        const key = a < b ? `${a},${b}` : `${b},${a}`;
+                        adjacency.add(key);
+                    }
+                }
             }
         }
     }
-    ctx.putImageData(imgData, 0, 0);
-    // 画边界和标签
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    regions.forEach((r, i) => {
-        ctx.fillStyle = '#fff';
-        ctx.fillText(i + 1, r.seed.x, r.seed.y + 5);
-    });
-}
 
-function hexToRgb(hex) {
-    const v = parseInt(hex.slice(1), 16);
-    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-}
-
-function findRegionAt(x, y) {
-    let nearest = 0, minD = Infinity;
-    regions.forEach((r, i) => {
-        const d = (r.seed.x - x) ** 2 + (r.seed.y - y) ** 2;
-        if (d < minD) { minD = d; nearest = i; }
-    });
-    return nearest;
-}
-
-function init() {
-    canvas = document.getElementById('gcCanvas');
-    ctx = canvas.getContext('2d');
-    generateMap();
-    computeVoronoi();
-    buildColorPicker();
-    updateColorCount();
-
-    canvas.onclick = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const idx = findRegionAt(x, y);
-        regions[idx].color = currentColor;
-        computeVoronoi();
-        updateColorCount();
-        if (checkSolved()) {
-            setTimeout(() => alert('🎉 完美着色！'), 100);
+    function draw() {
+        const img = ctx.createImageData(canvas.width, canvas.height);
+        const step = 2;
+        for (let y = 0; y < canvas.height; y += step) {
+            for (let x = 0; x < canvas.width; x += step) {
+                const idx = nearestRegion(x, y);
+                const r = regions[idx];
+                const c = r.color >= 0 ? hexToRgb(COLORS[r.color]) : [50, 60, 80];
+                for (let dy = 0; dy < step; dy++) {
+                    for (let dx = 0; dx < step; dx++) {
+                        const py = y + dy, px = x + dx;
+                        if (px >= canvas.width || py >= canvas.height) continue;
+                        const p = (py * canvas.width + px) * 4;
+                        img.data[p] = c[0];
+                        img.data[p+1] = c[1];
+                        img.data[p+2] = c[2];
+                        img.data[p+3] = 255;
+                    }
+                }
+            }
         }
-    };
-}
+        ctx.putImageData(img, 0, 0);
 
-function buildColorPicker() {
-    const el = document.getElementById('colorPicker');
-    el.innerHTML = '';
-    COLORS.forEach((c, i) => {
-        const sw = document.createElement('div');
-        sw.className = 'color-swatch' + (i === currentColor ? ' active' : '');
-        sw.style.background = c;
-        sw.onclick = () => {
-            currentColor = i;
-            buildColorPicker();
-        };
-        el.appendChild(sw);
-    });
-}
+        // 绘制边界线
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 1.5;
+        const step2 = 2;
+        for (let y = 0; y < canvas.height; y += step2) {
+            for (let x = 0; x < canvas.width; x += step2) {
+                const a = nearestRegion(x, y);
+                if (x + step2 < canvas.width) {
+                    const b = nearestRegion(x + step2, y);
+                    if (a !== b) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + step2, y);
+                        ctx.stroke();
+                    }
+                }
+                if (y + step2 < canvas.height) {
+                    const b = nearestRegion(x, y + step2);
+                    if (a !== b) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x, y + step2);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
 
-function updateColorCount() {
-    const used = new Set(regions.filter(r => r.color >= 0).map(r => r.color));
-    document.getElementById('colorCount').innerText = used.size;
-}
-
-// 简化版相邻检查：如果两个区域种子距离较近，视为相邻
-function areAdjacent(i, j) {
-    const a = regions[i].seed, b = regions[j].seed;
-    const d = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-    return d < 150;
-}
-
-function checkSolved() {
-    for (let i = 0; i < regions.length; i++) {
-        if (regions[i].color < 0) return false;
-        for (let j = i + 1; j < regions.length; j++) {
-            if (regions[j].color < 0) continue;
-            if (areAdjacent(i, j) && regions[i].color === regions[j].color) return false;
+        // 编号
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const r of regions) {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillText(r.label, r.seed.x + 1, r.seed.y + 1);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(r.label, r.seed.x, r.seed.y);
         }
     }
-    return true;
-}
 
-document.getElementById('btnNew').onclick = init;
-init();
+    function buildColorPicker() {
+        const picker = document.getElementById('colorPicker');
+        picker.innerHTML = '';
+        COLORS.forEach((c, i) => {
+            const sw = document.createElement('div');
+            sw.className = 'color-swatch' + (i === currentColor ? ' active' : '');
+            sw.style.background = c;
+            sw.onclick = () => { currentColor = i; buildColorPicker(); };
+            picker.appendChild(sw);
+        });
+    }
+
+    function updateColorCount() {
+        const used = new Set(regions.filter(r => r.color >= 0).map(r => r.color));
+        document.getElementById('colorCount').textContent = used.size;
+    }
+
+    function checkSolved() {
+        for (const r of regions) if (r.color < 0) return false;
+        for (const key of adjacency) {
+            const [i, j] = key.split(',').map(Number);
+            if (regions[i].color === regions[j].color) return false;
+        }
+        return true;
+    }
+
+    function newMap() {
+        generateMap();
+        draw();
+        buildColorPicker();
+        updateColorCount();
+    }
+
+    canvas = document.getElementById('gcCanvas');
+    ctx = canvas.getContext('2d');
+
+    canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        // 处理 CSS 缩放
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const idx = nearestRegion(x, y);
+        regions[idx].color = currentColor;
+        draw();
+        updateColorCount();
+        if (checkSolved()) setTimeout(() => alert('🎉 完美着色！'), 100);
+    });
+
+    document.getElementById('btnNew').onclick = newMap;
+
+    newMap();
+    GameBridge.notifyReady();
+})();
 </script>
 </body>
 </html>
