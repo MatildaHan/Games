@@ -2,24 +2,46 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>中国象棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.chess-layout { display: grid; grid-template-columns: auto 200px; gap: 24px; align-items: flex-start; }
+/* ---------- 布局 ---------- */
+.chess-layout {
+    display: grid;
+    grid-template-columns: auto 200px;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+.chess-board-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
 .chess-board {
     display: grid;
-    grid-template-columns: repeat(9, 52px);
-    grid-template-rows: repeat(10, 52px);
+    grid-template-columns: repeat(9, var(--cell, 52px));
+    grid-template-rows: repeat(10, var(--cell, 52px));
     background: #e8d8b0;
     border: 3px solid #7a5a3a;
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     position: relative;
+    touch-action: manipulation;
 }
 .chess-cell {
-    display: flex; justify-content: center; align-items: center;
-    font-size: 32px; font-weight: 700;
-    cursor: pointer; user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--cell, 52px) * 0.6);
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
     color: #333;
     position: relative;
     font-family: "KaiTi", "STKaiti", serif;
@@ -28,25 +50,82 @@
 .chess-cell.black { color: #2c3e50; }
 .chess-cell.selected { background: rgba(74,222,128,0.5); border-radius: 50%; }
 .chess-cell.valid::after {
-    content: ''; position: absolute;
-    width: 14px; height: 14px; border-radius: 50%;
+    content: '';
+    position: absolute;
+    width: calc(var(--cell, 52px) * 0.28);
+    height: calc(var(--cell, 52px) * 0.28);
+    border-radius: 50%;
     background: rgba(74,222,128,0.75);
 }
-.chess-side { display: flex; flex-direction: column; gap: 12px; }
+
+.chess-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .chess-side .card { font-size: 13px; }
 .chess-side .card b { color: var(--primary); }
 .chess-side select {
-    background: rgba(30,41,59,0.9); color: var(--text);
-    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-    padding: 6px 10px; font-size: 13px; font-family: inherit;
-    width: 100%; cursor: pointer; outline: none;
+    background: rgba(30,41,59,0.9);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    min-height: 40px;
+}
+
+/* ---------- 平板 ---------- */
+@media (max-width: 1023px) {
+    .chess-layout {
+        grid-template-columns: auto 170px;
+        gap: 16px;
+    }
+    .chess-board { --cell: 44px; }
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .chess-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        align-items: center;
+        justify-items: center;
+        height: auto;
+    }
+    .chess-board { --cell: min(10vw, 38px); }
+    .chess-side {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        gap: 8px;
+    }
+    .chess-side .card {
+        flex: 1 1 100%;
+        padding: 10px;
+        font-size: 12px;
+    }
+    .chess-side select { font-size: 12px; padding: 6px; min-height: 36px; }
+    .chess-side .btn { flex: 1 1 45%; font-size: 13px; }
+}
+
+/* ---------- 横屏手机：棋盘占满 ---------- */
+@media (max-width: 900px) and (orientation: landscape) {
+    .chess-board { --cell: min(7.5vh, 40px); }
 }
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="chess-layout">
-        <div id="board" class="chess-board"></div>
+        <div class="chess-board-wrap">
+            <div id="board" class="chess-board"></div>
+        </div>
         <div class="chess-side">
             <div class="card">
                 <div class="card-title">对局状态</div>
@@ -323,7 +402,6 @@
         if (gameOver || turn === playerSide) return;
         aiThinking = true;
         turnLabel.textContent = 'AI 思考中…';
-        // 让浏览器先渲染，再执行重计算
         setTimeout(() => {
             aiPlay();
             aiThinking = false;
