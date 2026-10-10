@@ -6,7 +6,6 @@
 <title>中国象棋</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-/* 水墨主题 */
 body.ink-theme {
     background-color: #F5EFE0;
     background-image:
@@ -42,18 +41,14 @@ body.ink-theme::before { display: none; }
 }
 .chess-board-wrap { display: flex; justify-content: center; align-items: center; }
 
-/* ============================================================
-   棋盘：宣纸底 + 淡墨格线
-   ============================================================ */
+/* 棋盘 */
 .chess-board {
     position: relative;
     display: grid;
     grid-template-columns: repeat(9, var(--cell, 52px));
     grid-template-rows: repeat(10, var(--cell, 52px));
-    /* 宣纸底 */
     background:
         radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(0,0,0,0) 70%),
-        /* 纸张纤维 */
         repeating-linear-gradient(95deg,
             rgba(180, 160, 120, 0.06) 0px,
             rgba(180, 160, 120, 0.06) 1px,
@@ -65,16 +60,12 @@ body.ink-theme::before { display: none; }
             transparent 1px,
             transparent 5px),
         linear-gradient(135deg, #F5EFE0 0%, #EBE2CE 60%, #E0D3B5 100%);
-    /* 木质外框（深墨棕） */
     border: 12px solid #3A2E1F;
     border-radius: 2px;
     box-shadow:
-        /* 内圈金线 */
         inset 0 0 0 1px #C9A961,
         inset 0 0 0 2px rgba(44, 44, 44, 0.6),
-        /* 纸张暗角 */
         inset 0 0 60px rgba(120, 90, 40, 0.2),
-        /* 外阴影 */
         0 10px 30px rgba(44, 30, 10, 0.35),
         0 2px 6px rgba(44, 30, 10, 0.25);
     background-clip: padding-box;
@@ -82,8 +73,6 @@ body.ink-theme::before { display: none; }
     font-family: "KaiTi", "STKaiti", "Songti SC", serif;
     box-sizing: content-box;
 }
-
-/* 木框纹理 */
 .chess-board::before {
     content: '';
     position: absolute;
@@ -99,8 +88,6 @@ body.ink-theme::before { display: none; }
     z-index: -1;
     pointer-events: none;
 }
-
-/* 棋盘格线（淡墨） */
 .chess-board::after {
     content: '';
     position: absolute;
@@ -119,7 +106,6 @@ body.ink-theme::before { display: none; }
     opacity: 0.75;
 }
 
-/* 九宫斜线（墨色细线） */
 .chess-board .palace-top,
 .chess-board .palace-bottom {
     position: absolute;
@@ -135,7 +121,6 @@ body.ink-theme::before { display: none; }
 .chess-board .palace-top { top: 0; }
 .chess-board .palace-bottom { bottom: 0; }
 
-/* 楚河汉界：毛笔字效果 */
 .chess-river {
     position: absolute;
     left: 0;
@@ -160,9 +145,6 @@ body.ink-theme::before { display: none; }
         1px 0 1px rgba(255,255,255,0.2);
 }
 
-/* ============================================================
-   棋子：白瓷 / 墨玉
-   ============================================================ */
 .chess-cell {
     position: relative;
     display: flex;
@@ -187,7 +169,6 @@ body.ink-theme::before { display: none; }
     line-height: 1;
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
-    /* 默认（红方）：白瓷 */
     background:
         radial-gradient(circle at 40% 35%,
             #FFFFFF 0%,
@@ -200,8 +181,6 @@ body.ink-theme::before { display: none; }
         inset 0 1px 2px rgba(255,255,255,0.95),
         inset 0 -3px 5px rgba(120, 90, 40, 0.25);
 }
-
-/* 内圈细线（墨色） */
 .chess-piece::before {
     content: '';
     position: absolute;
@@ -210,7 +189,6 @@ body.ink-theme::before { display: none; }
     border: 1.5px solid rgba(44, 44, 44, 0.65);
     pointer-events: none;
 }
-/* 内圈再一层 */
 .chess-piece::after {
     content: '';
     position: absolute;
@@ -220,16 +198,8 @@ body.ink-theme::before { display: none; }
     opacity: 0.5;
     pointer-events: none;
 }
-
-/* 红方：朱红字 + 印泥红描边 */
-.chess-cell.red .chess-piece {
-    color: #B83B3B;
-}
-.chess-cell.red .chess-piece::before {
-    border-color: rgba(184, 59, 59, 0.75);
-}
-
-/* 黑方：焦墨字 + 墨色描边 + 深瓷底 */
+.chess-cell.red .chess-piece { color: #B83B3B; }
+.chess-cell.red .chess-piece::before { border-color: rgba(184, 59, 59, 0.75); }
 .chess-cell.black .chess-piece {
     color: #1A1A1A;
     background:
@@ -244,11 +214,8 @@ body.ink-theme::before { display: none; }
         inset 0 1px 2px rgba(255,255,255,0.85),
         inset 0 -3px 5px rgba(80, 60, 20, 0.35);
 }
-.chess-cell.black .chess-piece::before {
-    border-color: rgba(26, 26, 26, 0.8);
-}
+.chess-cell.black .chess-piece::before { border-color: rgba(26, 26, 26, 0.8); }
 
-/* 选中：朱红印章外圈 */
 .chess-cell.selected .chess-piece {
     transform: translateY(-2px) scale(1.06);
     box-shadow:
@@ -258,8 +225,6 @@ body.ink-theme::before { display: none; }
         inset 0 -3px 5px rgba(120, 90, 40, 0.25),
         0 0 0 3px rgba(184, 59, 59, 0.9);
 }
-
-/* 可落子：墨色小圆点 */
 .chess-cell.valid::after {
     content: '';
     position: absolute;
@@ -275,8 +240,6 @@ body.ink-theme::before { display: none; }
     0%, 100% { transform: scale(1); opacity: 0.85; }
     50% { transform: scale(1.2); opacity: 1; }
 }
-
-/* 上一步：淡金圆环 */
 .chess-cell.lastmove .chess-piece {
     box-shadow:
         0 4px 8px rgba(44, 30, 10, 0.5),
@@ -286,24 +249,7 @@ body.ink-theme::before { display: none; }
         0 0 0 3px rgba(201, 169, 97, 0.85);
 }
 
-@media (max-width: 767px) {
-    .chess-board {
-        border-width: 8px;
-        box-shadow:
-            inset 0 0 0 1px #C9A961,
-            inset 0 0 0 2px rgba(44, 44, 44, 0.6),
-            inset 0 0 40px rgba(120, 90, 40, 0.2),
-            0 6px 16px rgba(44, 30, 10, 0.3);
-    }
-    .chess-board::before { inset: -8px; }
-    .chess-river {
-        font-size: calc(var(--cell) * 0.7);
-    }
-}
-
-/* ============================================================
-   侧栏
-   ============================================================ */
+/* 侧栏 */
 .chess-side { display: flex; flex-direction: column; gap: 12px; }
 
 .ink-card {
@@ -328,10 +274,7 @@ body.ink-theme::before { display: none; }
     border-bottom: 1px solid rgba(44, 44, 44, 0.15);
     padding-bottom: 6px;
 }
-.ink-card b {
-    color: #B83B3B;
-    font-weight: 700;
-}
+.ink-card b { color: #B83B3B; font-weight: 700; }
 
 .ink-select {
     background: rgba(245, 239, 224, 0.95);
@@ -354,9 +297,7 @@ body.ink-theme::before { display: none; }
     background-position: right 12px center;
     padding-right: 32px;
 }
-.ink-select:focus {
-    border-color: #B83B3B;
-}
+.ink-select:focus { border-color: #B83B3B; }
 
 .ink-btn {
     background: transparent;
@@ -381,69 +322,86 @@ body.ink-theme::before { display: none; }
     color: #F5EFE0;
     border-color: #8B2A2A;
 }
-.ink-btn.primary:hover:not(:disabled) {
-    background: #8B2A2A;
-}
-.ink-btn:active:not(:disabled) {
-    transform: translateY(1px);
-}
+.ink-btn.primary:hover:not(:disabled) { background: #8B2A2A; }
+.ink-btn:active:not(:disabled) { transform: translateY(1px); }
 
 @media (max-width: 1023px) {
     .chess-layout { grid-template-columns: auto 170px; gap: 14px; }
 }
+
+/* ============================================================
+   手机端：棋盘铺满屏宽，侧栏移到下方
+   ============================================================ */
 @media (max-width: 767px) {
+    body.ink-theme { padding: 0; }
+
     .chess-layout {
         grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: center;
-        justify-items: center;
+        gap: 10px;
+        align-items: stretch;
+        justify-items: stretch;
+        width: 100%;
+        padding: 0 6px;
+        box-sizing: border-box;
     }
+    .chess-board-wrap {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    /* 关键：棋盘宽度铺满 */
+    .chess-board {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        border-width: 8px;
+        box-shadow:
+            inset 0 0 0 1px #C9A961,
+            inset 0 0 0 2px rgba(44, 44, 44, 0.6),
+            inset 0 0 30px rgba(120, 90, 40, 0.2),
+            0 6px 16px rgba(44, 30, 10, 0.3);
+    }
+    .chess-board::before { inset: -8px; }
+    .chess-river {
+        font-size: calc(var(--cell) * 0.7);
+        letter-spacing: 0.1em;
+    }
+
+    /* 侧栏横排 */
     .chess-side {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
+        align-items: stretch;
         width: 100%;
-        gap: 8px;
+        gap: 6px;
     }
-    .ink-card { flex: 1 1 100%; padding: 10px; font-size: 12px; }
-    .ink-select { font-size: 13px; padding: 6px 30px 6px 8px; min-height: 36px; letter-spacing: 2px; }
-    .ink-btn { flex: 1 1 45%; font-size: 14px; letter-spacing: 4px; }
+    .ink-card {
+        flex: 1 1 100%;
+        padding: 8px 12px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .ink-card .card-title {
+        font-size: 12px;
+        letter-spacing: 3px;
+        margin-bottom: 4px;
+        padding-bottom: 4px;
+    }
+    .ink-select {
+        font-size: 13px;
+        padding: 6px 28px 6px 8px;
+        min-height: 36px;
+        letter-spacing: 2px;
+    }
+    .ink-btn {
+        flex: 1 1 calc(33% - 6px);
+        font-size: 14px;
+        letter-spacing: 3px;
+        padding: 8px 10px;
+        min-height: 42px;
+    }
 }
-
-/* 水墨模态框 */
-body.ink-theme .modal-box {
-    background: #F5EFE0;
-    border: 1px solid #4A4A4A;
-    border-radius: 2px;
-    box-shadow:
-        inset 0 0 40px rgba(180, 160, 120, 0.2),
-        0 20px 60px rgba(44, 30, 10, 0.3);
-    font-family: "KaiTi", "STKaiti", serif;
-    padding: 40px 48px;
-    max-width: 90vw;
-    width: 420px;
-}
-body.ink-theme .modal-box h2 {
-    color: #1A1A1A;
-    font-size: 26px;
-    letter-spacing: 6px;
-    margin-bottom: 16px;
-    font-weight: 400;
-}
-body.ink-theme .modal-box p {
-    color: #4A4A4A;
-    font-size: 15px;
-    letter-spacing: 3px;
-}
-body.ink-theme .modal-box .big-value {
-    color: #B83B3B;
-    font-size: 42px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    font-family: "KaiTi", "STKaiti", serif;
-}
-body.ink-theme .modal-actions { display: flex; gap: 12px; justify-content: center; }
-body.ink-theme .modal-actions .ink-btn { flex: 1; }
 </style>
 </head>
 <body class="embedded ink-theme">
@@ -473,11 +431,6 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
             <button class="ink-btn primary" id="btnNew">新　局</button>
             <button class="ink-btn" id="btnUndo">悔　棋</button>
             <button class="ink-btn" id="btnSwap">换　手</button>
-            <div class="ink-card" style="font-size:12px;">
-                <div class="card-title">手谈</div>
-                点己方棋子<br>
-                再点墨点落子
-            </div>
         </div>
     </div>
 </div>
@@ -501,9 +454,6 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
     document.body.classList.add('embedded', 'ink-theme');
     GameBridge.notifyReady();
 
-    // ============================================================
-    // 数据（与之前完全一致）
-    // ============================================================
     const INIT = [
         ['r','n','b','a','k','a','b','n','r'],
         [0,0,0,0,0,0,0,0,0],
@@ -543,18 +493,23 @@ body.ink-theme .modal-actions .ink-btn { flex: 1; }
     const sameSide = (a, b) => (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
 
     // ============================================================
-    // 棋盘尺寸
+    // 棋盘尺寸：手机端铺满屏宽
     // ============================================================
     function calcCellSize() {
         const wrap = document.querySelector('.chess-board-wrap');
         const vw = wrap ? wrap.clientWidth : window.innerWidth;
         const vh = window.innerHeight;
-        const frame = 28;
-        const availW = vw - frame - 4;
-        const availH = vh - 240;
+        const isMobile = window.innerWidth <= 767;
+
+        // 木框 = 12px × 2 = 24px（桌面），8px × 2 = 16px（手机）
+        const frame = isMobile ? 16 : 24;
+        // 桌面：木框 + 内边距；手机：只保留极少边距
+        const availW = vw - frame;
+        // 手机端：给侧栏和按钮预留约 260px（nav ~ 130 + 侧栏卡片 ~ 80 + gap）
+        const availH = isMobile ? vh - 280 : vh - 240;
         const byW = Math.floor(availW / 9);
         const byH = Math.floor(availH / 10);
-        return Math.max(24, Math.min(byW, byH, 56));
+        return Math.max(24, Math.min(byW, byH, isMobile ? 48 : 56));
     }
 
     let cellEls = null;
