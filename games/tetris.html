@@ -5,65 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>俄罗斯方块</title>
 <link rel="stylesheet" href="../css/common.css">
-<!-- 像素字体 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   像素复古主题
+   像素复古主题：全部用 .px-theme 作用域，避免污染其他游戏
    ============================================================ */
-:root {
-    /* 8-bit 色板 */
-    --px-bg:        #0b0e1a;   /* 深蓝黑 */
-    --px-bg-2:      #141a2e;   /* 稍浅 */
-    --px-panel:     #1a2140;   /* 面板 */
-    --px-panel-2:   #222a52;   /* 面板亮 */
-    --px-border:    #3a4a7a;   /* 边框 */
-    --px-border-hi: #6a7ec4;   /* 边框高光 */
-    --px-grid:      #2a3456;   /* 网格线 */
-    --px-text:      #e8f0ff;   /* 主文字 */
-    --px-text-dim:  #8a9ac4;   /* 次文字 */
-    --px-accent:    #f7d51d;   /* 亮黄 */
 
-    /* 方块色（8-bit 高饱和） */
-    --blk-cyan:    #00e0e0;
-    --blk-yellow:  #f7d51d;
-    --blk-purple:  #a020f0;
-    --blk-green:   #00c020;
-    --blk-red:     #e03030;
-    --blk-blue:    #2060f0;
-    --blk-orange:  #f08000;
-}
-
-/* 像素字体 fallback */
-* {
+/* 只在 .px-theme 下使用像素字体 */
+.px-theme,
+.px-theme * {
     font-family: "Press Start 2P", "Courier New", monospace;
+}
+.px-theme {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 }
 
-/* 覆盖 common.css 里的圆角 */
-.tetris-layout {
-    display: grid;
-    grid-template-columns: 180px auto 200px;
-    gap: 24px;
-    align-items: flex-start;
-    width: 100%;
-    justify-content: center;
+/* ============================================================
+   像素主题背景（只在 .px-theme 上生效）
+   ============================================================ */
+.px-theme.game-inner {
+    background:
+        radial-gradient(ellipse at center, #1a2140 0%, #0b0e1a 70%),
+        #0b0e1a;
+    /* 保持与 common.css 的 padding 一致 */
+    padding: 16px;
+}
+/* 网格背景 */
+.px-theme.game-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image:
+        linear-gradient(rgba(58, 74, 122, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58, 74, 122, 0.15) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+/* CRT 扫描线 */
+.px-theme.game-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    opacity: 0.35;
+}
+/* 内容层要在背景之上 */
+.px-theme .tetris-layout {
+    position: relative;
+    z-index: 2;
 }
 
-.tetris-side {
+/* ============================================================
+   色板
+   ============================================================ */
+.px-theme {
+    --px-bg:        #0b0e1a;
+    --px-panel:     #1a2140;
+    --px-panel-2:   #222a52;
+    --px-border:    #3a4a7a;
+    --px-border-hi: #6a7ec4;
+    --px-text:      #e8f0ff;
+    --px-text-dim:  #8a9ac4;
+    --px-accent:    #f7d51d;
+}
+
+/* ============================================================
+   布局：flex（与其他游戏一致）
+   ============================================================ */
+.px-theme .tetris-layout {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    min-height: 100%;
+}
+.px-theme .tetris-side {
     display: flex;
     flex-direction: column;
     gap: 14px;
     min-width: 0;
+    flex-shrink: 0;
 }
 
 /* ============================================================
-   像素卡片（面板）
+   像素卡片
    ============================================================ */
-.px-card {
+.px-theme .px-card {
     background: var(--px-panel);
     border: 3px solid var(--px-border);
     box-shadow:
@@ -72,17 +113,17 @@
         0 0 0 3px var(--px-bg),
         6px 6px 0 0 rgba(0, 0, 0, 0.5);
     padding: 16px;
-    border-radius: 0;              /* 无圆角 */
+    border-radius: 0;
     position: relative;
 }
-.px-card .card-title {
+.px-theme .px-card .card-title {
     font-size: 10px;
     color: var(--px-text-dim);
     letter-spacing: 2px;
     margin-bottom: 10px;
     text-transform: uppercase;
 }
-.px-card .card-value {
+.px-theme .px-card .card-value {
     font-size: 20px;
     color: var(--px-accent);
     font-weight: 700;
@@ -93,7 +134,7 @@
 /* ============================================================
    画布
    ============================================================ */
-#tetris-canvas {
+.px-theme #tetris-canvas {
     display: block;
     background: #000;
     border: 4px solid var(--px-border);
@@ -105,8 +146,9 @@
     height: auto;
     touch-action: none;
     image-rendering: pixelated;
+    flex-shrink: 0;
 }
-#next-canvas {
+.px-theme #next-canvas {
     display: block;
     margin: 0 auto;
     max-width: 100%;
@@ -119,7 +161,7 @@
 /* ============================================================
    像素按钮
    ============================================================ */
-.px-btn {
+.px-theme .px-btn {
     background: var(--px-panel-2);
     color: var(--px-text);
     border: 3px solid var(--px-border);
@@ -139,11 +181,11 @@
     transition: transform 0.05s, box-shadow 0.05s;
     width: 100%;
 }
-.px-btn:hover:not(:disabled) {
+.px-theme .px-btn:hover:not(:disabled) {
     background: var(--px-border);
     color: #fff;
 }
-.px-btn:active:not(:disabled) {
+.px-theme .px-btn:active:not(:disabled) {
     transform: translate(3px, 3px);
     box-shadow:
         inset -3px -3px 0 0 rgba(0, 0, 0, 0.5),
@@ -151,28 +193,23 @@
         0 0 0 3px var(--px-bg),
         1px 1px 0 0 rgba(0, 0, 0, 0.6);
 }
-.px-btn:disabled {
+.px-theme .px-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     color: var(--px-text-dim);
 }
-.px-btn.primary {
+.px-theme .px-btn.primary {
     background: var(--px-accent);
     color: #000;
     border-color: #8a6a00;
 }
-.px-btn.primary:hover:not(:disabled) {
-    background: #fff;
-}
-.px-btn.tall {
-    height: 80px;
-    font-size: 12px;
-}
+.px-theme .px-btn.primary:hover:not(:disabled) { background: #fff; }
+.px-theme .px-btn.tall { height: 80px; font-size: 12px; }
 
 /* ============================================================
    移动端触屏按钮
    ============================================================ */
-.touch-controls {
+.px-theme .touch-controls {
     display: none;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
@@ -180,7 +217,7 @@
     max-width: 360px;
     margin: 12px auto 0;
 }
-.px-touch-btn {
+.px-theme .px-touch-btn {
     background: var(--px-panel-2);
     border: 3px solid var(--px-border);
     box-shadow:
@@ -199,7 +236,7 @@
     font-family: inherit;
     touch-action: manipulation;
 }
-.px-touch-btn:active {
+.px-theme .px-touch-btn:active {
     transform: translate(2px, 2px);
     background: var(--px-border);
 }
@@ -207,13 +244,13 @@
 /* ============================================================
    说明面板
    ============================================================ */
-.px-help {
+.px-theme .px-help {
     font-size: 8px;
     line-height: 1.8;
     color: var(--px-text-dim);
     letter-spacing: 0.5px;
 }
-.px-help .key {
+.px-theme .px-help .key {
     color: var(--px-accent);
     background: var(--px-bg);
     padding: 1px 4px;
@@ -221,80 +258,52 @@
 }
 
 /* ============================================================
-   背景：CRT 深空 + 网格
-   ============================================================ */
-body.embedded {
-    background:
-        radial-gradient(ellipse at center, #1a2140 0%, #0b0e1a 70%),
-        #0b0e1a;
-}
-body.embedded::before {
-    background-image:
-        linear-gradient(rgba(58, 74, 122, 0.15) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(58, 74, 122, 0.15) 1px, transparent 1px);
-    background-size: 32px 32px;
-}
-
-/* 扫描线效果（可选） */
-body.embedded::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.15) 0px,
-        rgba(0, 0, 0, 0.15) 1px,
-        transparent 1px,
-        transparent 3px
-    );
-    opacity: 0.35;
-}
-
-/* ============================================================
    响应式
    ============================================================ */
 @media (max-width: 1023px) {
-    .tetris-layout {
-        grid-template-columns: 140px auto 160px;
+    .px-theme .tetris-layout {
+        flex-wrap: wrap;
         gap: 16px;
     }
 }
 
 @media (max-width: 767px) {
-    .tetris-layout {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: center;
-        justify-items: center;
+    .px-theme.game-inner {
+        padding: 8px;
     }
-    .tetris-side {
+    .px-theme .tetris-layout {
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        flex-wrap: nowrap;
+    }
+    .px-theme .tetris-side {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
         width: 100%;
         gap: 8px;
     }
-    .tetris-side .px-card {
+    .px-theme .tetris-side .px-card {
         flex: 1 1 100px;
         min-width: 100px;
         padding: 8px;
         text-align: center;
     }
-    .tetris-side .px-card .card-title { font-size: 8px; margin-bottom: 4px; }
-    .tetris-side .px-card .card-value { font-size: 14px; }
-    .tetris-side #btnStart { flex: 1 1 100%; }
-    .tetris-side .px-btn.tall { display: none; }
-    .tetris-side .px-help { display: none; }
-    .touch-controls { display: grid; }
-    #tetris-canvas { width: auto; max-height: 45vh; }
+    .px-theme .tetris-side .px-card .card-title { font-size: 8px; margin-bottom: 4px; }
+    .px-theme .tetris-side .px-card .card-value { font-size: 14px; }
+    .px-theme .tetris-side #btnStart { flex: 1 1 100%; }
+    .px-theme .tetris-side .px-btn.tall { display: none; }
+    .px-theme .tetris-side .px-help { display: none; }
+    .px-theme .touch-controls { display: grid; }
+    .px-theme #tetris-canvas { width: auto; max-height: 45vh; }
 }
 
 /* ============================================================
-   像素模态弹窗（覆盖 common.css 的圆角 modal）
+   像素模态框（只在 .px-theme 的 modal 上生效）
    ============================================================ */
-.modal-box {
+.px-theme .modal-box {
     background: var(--px-panel);
     border: 4px solid var(--px-border);
     box-shadow:
@@ -303,30 +312,37 @@ body.embedded::after {
         8px 8px 0 0 rgba(0, 0, 0, 0.6);
     border-radius: 0;
     padding: 32px 40px;
-    font-family: inherit;
+    font-family: "Press Start 2P", "Courier New", monospace;
 }
-.modal-box h2 {
+.px-theme .modal-box h2 {
     color: var(--px-accent);
     font-size: 16px;
     letter-spacing: 2px;
     text-shadow: 2px 2px 0 #000;
     margin-bottom: 16px;
 }
-.modal-box p {
+.px-theme .modal-box p {
     color: var(--px-text-dim);
     font-size: 10px;
     letter-spacing: 1px;
 }
-.modal-box .big-value {
+.px-theme .modal-box .big-value {
     color: #fff;
     font-size: 28px;
     text-shadow: 3px 3px 0 var(--px-border);
     font-weight: 700;
 }
+.px-theme .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+.px-theme .modal-actions .px-btn { flex: 1; }
 </style>
 </head>
 <body class="embedded">
-<div class="game-inner">
+<!-- 关键：在 game-inner 上加 px-theme 类，把像素风作用域限制在这里 -->
+<div class="game-inner px-theme">
     <div class="tetris-layout">
         <div class="tetris-side">
             <div class="px-card" style="text-align:center;">
@@ -370,8 +386,8 @@ body.embedded::after {
     </div>
 </div>
 
-<!-- 模态框 -->
-<div class="modal" id="modal">
+<!-- 模态框需要在 px-theme 下才能用像素样式，所以在 wrapper 里加 px-theme -->
+<div class="modal px-theme" id="modal">
     <div class="modal-box">
         <h2 id="modalTitle">GAME OVER</h2>
         <p id="modalSub">FINAL SCORE<span class="big-value" id="finalScore">0</span></p>
@@ -394,18 +410,16 @@ body.embedded::after {
     const BASE_INTERVAL = 800;
     const MIN_INTERVAL = 100;
 
-    // 8-bit 色板（方块）
     const PIECES = [
-        { shape: [[1,1,1,1]], color: '#00e0e0' },        // I 青
-        { shape: [[1,1],[1,1]], color: '#f7d51d' },      // O 黄
-        { shape: [[0,1,0],[1,1,1]], color: '#a020f0' },  // T 紫
-        { shape: [[0,1,1],[1,1,0]], color: '#00c020' },  // S 绿
-        { shape: [[1,1,0],[0,1,1]], color: '#e03030' },  // Z 红
-        { shape: [[1,0,0],[1,1,1]], color: '#2060f0' },  // J 蓝
-        { shape: [[0,0,1],[1,1,1]], color: '#f08000' }   // L 橙
+        { shape: [[1,1,1,1]], color: '#00e0e0' },
+        { shape: [[1,1],[1,1]], color: '#f7d51d' },
+        { shape: [[0,1,0],[1,1,1]], color: '#a020f0' },
+        { shape: [[0,1,1],[1,1,0]], color: '#00c020' },
+        { shape: [[1,1,0],[0,1,1]], color: '#e03030' },
+        { shape: [[1,0,0],[1,1,1]], color: '#2060f0' },
+        { shape: [[0,0,1],[1,1,1]], color: '#f08000' }
     ];
 
-    // 7-bag 随机
     let bag = [];
     function nextFromBag() {
         if (bag.length === 0) {
@@ -418,7 +432,6 @@ body.embedded::after {
         return PIECES[bag.pop()];
     }
 
-    // Canvas + DPR
     const canvas = document.getElementById('tetris-canvas');
     const ctx = canvas.getContext('2d');
     const nextCanvas = document.getElementById('next-canvas');
@@ -436,7 +449,6 @@ body.embedded::after {
         context.imageSmoothingEnabled = false;
     }
 
-    // 状态
     const scoreEl = document.getElementById('score');
     const levelEl = document.getElementById('level');
     const btnStart = document.getElementById('btnStart');
@@ -588,16 +600,11 @@ body.embedded::after {
         draw();
     }
 
-    // ============================================================
-    // 绘制（像素风：硬边 + 高光 + 阴影）
-    // ============================================================
     function draw() {
         ctx.clearRect(0, 0, 240, 480);
-        // 背景
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, 240, 480);
 
-        // 网格（暗绿色细线，CRT 感）
         ctx.strokeStyle = 'rgba(58, 74, 122, 0.35)';
         ctx.lineWidth = 1;
         for (let i = 1; i < COLS; i++) {
@@ -621,25 +628,20 @@ body.embedded::after {
         }
     }
 
-    // 像素方块：外框 + 内高光（左上）+ 内阴影（右下）
     function drawBlock(x, y, color) {
         const px = x * BLOCK, py = y * BLOCK;
         const S = BLOCK;
-        // 主色
         ctx.fillStyle = color;
         ctx.fillRect(px, py, S, S);
 
-        // 左上高光（3px）
         ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-        ctx.fillRect(px, py, S, 3);              // 顶
-        ctx.fillRect(px, py, 3, S);              // 左
+        ctx.fillRect(px, py, S, 3);
+        ctx.fillRect(px, py, 3, S);
 
-        // 右下阴影（3px）
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.fillRect(px, py + S - 3, S, 3);      // 底
-        ctx.fillRect(px + S - 3, py, 3, S);      // 右
+        ctx.fillRect(px, py + S - 3, S, 3);
+        ctx.fillRect(px + S - 3, py, 3, S);
 
-        // 极简像素描边（1px 外框）
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.lineWidth = 1;
         ctx.strokeRect(px + 0.5, py + 0.5, S - 1, S - 1);
@@ -659,15 +661,12 @@ body.embedded::after {
             const px = ox + x * bs, py = oy + y * bs;
             nextCtx.fillStyle = next.color;
             nextCtx.fillRect(px, py, bs - 2, bs - 2);
-            // 高光
             nextCtx.fillStyle = 'rgba(255, 255, 255, 0.55)';
             nextCtx.fillRect(px, py, bs - 2, 3);
             nextCtx.fillRect(px, py, 3, bs - 2);
-            // 阴影
             nextCtx.fillStyle = 'rgba(0, 0, 0, 0.45)';
             nextCtx.fillRect(px, py + bs - 5, bs - 2, 3);
             nextCtx.fillRect(px + bs - 5, py, 3, bs - 2);
-            // 描边
             nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
             nextCtx.lineWidth = 1;
             nextCtx.strokeRect(px + 0.5, py + 0.5, bs - 3, bs - 3);
@@ -718,14 +717,13 @@ body.embedded::after {
     function endGame() {
         state = 'over';
         if (rafId) cancelAnimationFrame(rafId);
-        showModal('GAME OVER', 'FINAL SCORE', 'RESTART', 'CLOSE');
+        showModal('GAME OVER', 'FINAL SCORE', 'RESTART', 'CLOSE', score);
         btnRestart.onclick = start;
         btnLeave.onclick = () => { modal.classList.remove('show'); leave(); };
     }
 
     function showModal(title, sub, restartText, leaveText, bigValue) {
         modalTitle.textContent = title;
-        // 保留 #finalScore 节点
         modalSub.innerHTML = sub + '<span class="big-value" id="finalScore"></span>';
         const el = modalSub.querySelector('#finalScore');
         if (bigValue !== null && bigValue !== undefined) el.textContent = bigValue;
@@ -739,7 +737,6 @@ body.embedded::after {
         reset();
     }
 
-    // 事件
     btnStart.onclick = start;
     btnRotate.addEventListener('click', rotate);
     btnPause.addEventListener('click', pause);
@@ -756,7 +753,6 @@ body.embedded::after {
         else if (action === 'rotate') rotate();
     });
 
-    // 滑动手势
     let touchStartX = 0, touchStartY = 0, touchMoved = false;
     canvas.addEventListener('touchstart', (e) => {
         if (state !== 'running') return;
