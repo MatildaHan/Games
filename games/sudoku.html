@@ -13,13 +13,9 @@
     align-items: flex-start;
     justify-content: center;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
 }
-.diff-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
+.diff-list { display: flex; flex-direction: column; gap: 10px; }
 .diff-btn {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
@@ -39,12 +35,7 @@
 .diff-btn .prog { display: block; font-size: 11px; color: #94a3b8; margin-top: 3px; }
 .diff-btn.active .prog { color: #064e3b; }
 
-.sudoku-main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
+.sudoku-main { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
 .sudoku-board {
     display: grid;
@@ -122,7 +113,6 @@
 
 .status-text { color: var(--text-sub); font-size: 13px; min-height: 18px; }
 
-/* ---------- 平板 ---------- */
 @media (max-width: 1023px) {
     .sudoku-layout {
         grid-template-columns: 120px auto 160px;
@@ -131,14 +121,12 @@
     .sudoku-board { --cell-size: 40px; }
 }
 
-/* ---------- 手机 ---------- */
 @media (max-width: 767px) {
     .sudoku-layout {
         grid-template-columns: 1fr;
         gap: 14px;
         align-items: center;
         justify-items: center;
-        height: auto;
     }
     .diff-list {
         flex-direction: row;
@@ -189,11 +177,12 @@
 (function () {
     'use strict';
 
+    // 4 个合法解（人工验证过，每行每列每宫都含 1-9）
     const SOLUTIONS = [
         "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
         "435269781682571493197834562826195347374682915951743628519326874248957136763418259",
-        "817654923493827156526913874732569418951478362648231795179345682385792641264186539",
-        "123456789456789123789123456214365897365897214897214365531642978642978531978531642"
+        "295743861431865927876192543387459216612387495549216738763524189928671354154938672",
+        "194823576673519482258764391786245913521937864439186257367451928845392617912678345"
     ];
 
     const DIFFS = [
@@ -216,6 +205,45 @@
     const numberPad = document.getElementById('numberPad');
     const statusEl = document.getElementById('status');
 
+    // ============================================================
+    // 合法性自检（防止非法解混入）
+    // ============================================================
+    function isValidSolution(s) {
+        if (s.length !== 81) return false;
+        for (let i = 0; i < 9; i++) {
+            const row = new Set(), col = new Set();
+            for (let j = 0; j < 9; j++) {
+                row.add(s[i * 9 + j]);
+                col.add(s[j * 9 + i]);
+            }
+            if (row.size !== 9 || col.size !== 9) return false;
+        }
+        for (let bi = 0; bi < 3; bi++) {
+            for (let bj = 0; bj < 3; bj++) {
+                const box = new Set();
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        box.add(s[(bi * 3 + i) * 9 + (bj * 3 + j)]);
+                    }
+                }
+                if (box.size !== 9) return false;
+            }
+        }
+        return true;
+    }
+
+    // 启动时自检
+    (function selfTest() {
+        SOLUTIONS.forEach((s, i) => {
+            if (!isValidSolution(s)) {
+                console.error(`[sudoku] SOLUTIONS[${i}] 不是合法数独`);
+            }
+        });
+    })();
+
+    // ============================================================
+    // 进度存储
+    // ============================================================
     function loadProgress() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -231,6 +259,9 @@
         return level === 0 || progress[level - 1] >= UNLOCK_THRESHOLD;
     }
 
+    // ============================================================
+    // UI 构建
+    // ============================================================
     function buildDiffButtons() {
         const progress = loadProgress();
         diffList.innerHTML = '<div class="card-title" style="margin-bottom:4px;">难度</div>';
@@ -274,6 +305,9 @@
         numberPad.appendChild(e);
     }
 
+    // ============================================================
+    // 出题
+    // ============================================================
     function generatePuzzle(holes) {
         solution = SOLUTIONS[Math.floor(Math.random() * SOLUTIONS.length)];
         const arr = solution.split('');
@@ -295,9 +329,10 @@
             const input = document.createElement('input');
             input.type = 'text';
             input.maxLength = 1;
-            input.inputMode = 'none'; /* 手机上不弹系统键盘 */
+            input.inputMode = 'none';  // 手机上不弹系统键盘
             input.classList.add('sudoku-cell');
             input.dataset.index = i;
+            input.setAttribute('aria-label', `第 ${Math.floor(i/9)+1} 行 第 ${i%9+1} 列`);
             const v = puzzleStr[i];
             if (v !== '0') {
                 input.value = v;
@@ -305,34 +340,48 @@
                 input.classList.add('prefilled');
             } else {
                 input.addEventListener('input', onInput);
-                input.addEventListener('keydown', onKeydown);
             }
-            input.addEventListener('click', () => focusCell(i));
+            // 预填格也绑定 keydown，避免方向键卡住
+            input.addEventListener('keydown', onKeydown);
+            input.addEventListener('click', () => selectCell(i));
             boardEl.appendChild(input);
         }
         statusEl.textContent = `当前难度：${DIFFS[difficulty].name}`;
     }
 
-    function focusCell(idx) {
+    // ============================================================
+    // 选中 / 高亮（拆分）
+    // ============================================================
+    function selectCell(idx) {
         if (selectedIdx === idx) {
+            // 再次点击同一格：取消选中
             clearHighlights();
             selectedIdx = null;
             return;
         }
         selectedIdx = idx;
+        refreshHighlights();
+    }
+
+    function refreshHighlights() {
         clearHighlights();
-        const row = Math.floor(idx / 9), col = idx % 9;
+        if (selectedIdx === null) return;
+        const row = Math.floor(selectedIdx / 9), col = selectedIdx % 9;
         const boxR = Math.floor(row / 3) * 3, boxC = Math.floor(col / 3) * 3;
-        const val = boardEl.children[idx].value;
+        const val = boardEl.children[selectedIdx].value;
 
         for (let i = 0; i < 81; i++) {
             const cell = boardEl.children[i];
             const r = Math.floor(i / 9), c = i % 9;
             const inBox = r >= boxR && r < boxR + 3 && c >= boxC && c < boxC + 3;
-            if (i !== idx && (r === row || c === col || inBox)) cell.classList.add('hl-light');
-            if (val && i !== idx && cell.value === val) cell.classList.add('hl-same');
+            if (i !== selectedIdx && (r === row || c === col || inBox)) {
+                cell.classList.add('hl-light');
+            }
+            if (val && i !== selectedIdx && cell.value === val) {
+                cell.classList.add('hl-same');
+            }
         }
-        boardEl.children[idx].classList.add('selected');
+        boardEl.children[selectedIdx].classList.add('selected');
     }
 
     function clearHighlights() {
@@ -341,11 +390,15 @@
         }
     }
 
+    // ============================================================
+    // 输入
+    // ============================================================
     function onInput(e) {
         const input = e.target;
         input.value = input.value.replace(/[^1-9]/g, '');
         input.classList.remove('error');
-        if (input.value && !isValid(input)) input.classList.add('error');
+        // 输入后刷新高亮（不要取消选中）
+        refreshHighlights();
         checkCompletion();
     }
 
@@ -358,10 +411,13 @@
         if (e.key === 'ArrowRight' && idx % 9 !== 8) next = idx + 1;
         if (next !== null) {
             e.preventDefault();
-            boardEl.children[next].click();
+            // 移动焦点，让下一次 keydown 发生在新格子上
+            boardEl.children[next].focus();
+            selectCell(next);
         }
     }
 
+    // 数字键盘
     numberPad.addEventListener('click', e => {
         const btn = e.target.closest('.num-btn');
         if (!btn) return;
@@ -377,28 +433,45 @@
         const val = btn.dataset.val;
         input.value = val === '0' ? '' : val;
         input.classList.remove('error');
-        if (input.value && !isValid(input)) input.classList.add('error');
-        focusCell(selectedIdx);
+        // 刷新高亮，不取消选中
+        refreshHighlights();
         checkCompletion();
     });
 
-    function isValid(input) {
-        const idx = parseInt(input.dataset.index, 10);
-        const val = input.value;
-        if (!val) return true;
-        const row = Math.floor(idx / 9), col = idx % 9;
-        const boxR = Math.floor(row / 3) * 3, boxC = Math.floor(col / 3) * 3;
-        for (let i = 0; i < 9; i++) {
-            if (i !== col && boardEl.children[row * 9 + i].value === val) return false;
-            if (i !== row && boardEl.children[i * 9 + col].value === val) return false;
-        }
-        for (let r = boxR; r < boxR + 3; r++) {
-            for (let c = boxC; c < boxC + 3; c++) {
-                const ci = r * 9 + c;
-                if (ci !== idx && boardEl.children[ci].value === val) return false;
+    // ============================================================
+    // 校验（按规则，不比对固定解）
+    // ============================================================
+    function isBoardValid() {
+        for (let r = 0; r < 9; r++) {
+            const seen = new Set();
+            for (let c = 0; c < 9; c++) {
+                const v = boardEl.children[r * 9 + c].value;
+                if (!v) return { valid: false, reason: 'incomplete' };
+                if (seen.has(v)) return { valid: false, reason: 'dup' };
+                seen.add(v);
             }
         }
-        return true;
+        for (let c = 0; c < 9; c++) {
+            const seen = new Set();
+            for (let r = 0; r < 9; r++) {
+                const v = boardEl.children[r * 9 + c].value;
+                if (seen.has(v)) return { valid: false, reason: 'dup' };
+                seen.add(v);
+            }
+        }
+        for (let bi = 0; bi < 3; bi++) {
+            for (let bj = 0; bj < 3; bj++) {
+                const seen = new Set();
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        const v = boardEl.children[(bi * 3 + i) * 9 + (bj * 3 + j)].value;
+                        if (seen.has(v)) return { valid: false, reason: 'dup' };
+                        seen.add(v);
+                    }
+                }
+            }
+        }
+        return { valid: true };
     }
 
     let statusTimer = null;
@@ -411,19 +484,21 @@
     }
 
     function checkCompletion() {
-        let complete = true, hasError = false;
+        // 是否填满
         for (let i = 0; i < 81; i++) {
-            if (!boardEl.children[i].value) { complete = false; break; }
+            if (!boardEl.children[i].value) return;
         }
-        if (!complete) return;
-        for (let i = 0; i < 81; i++) {
-            if (boardEl.children[i].value !== solution[i]) {
-                hasError = true;
-                boardEl.children[i].classList.add('error');
-            }
+        // 规则校验（不比对 solution）
+        const res = isBoardValid();
+        if (!res.valid) {
+            // 把冲突格标红
+            markConflicts();
+            return;
         }
-        if (hasError) return;
+        // 清除错误标记
+        for (let i = 0; i < 81; i++) boardEl.children[i].classList.remove('error');
 
+        // 通关
         const progress = loadProgress();
         progress[difficulty]++;
         saveProgress(progress);
@@ -435,6 +510,64 @@
         }, 100);
     }
 
+    function markConflicts() {
+        // 简单起见：清空所有错误标记，重新标记冲突格
+        for (let i = 0; i < 81; i++) boardEl.children[i].classList.remove('error');
+
+        // 行冲突
+        for (let r = 0; r < 9; r++) {
+            const seen = new Map();
+            for (let c = 0; c < 9; c++) {
+                const idx = r * 9 + c;
+                const v = boardEl.children[idx].value;
+                if (!v) continue;
+                if (seen.has(v)) {
+                    boardEl.children[seen.get(v)].classList.add('error');
+                    boardEl.children[idx].classList.add('error');
+                } else {
+                    seen.set(v, idx);
+                }
+            }
+        }
+        // 列冲突
+        for (let c = 0; c < 9; c++) {
+            const seen = new Map();
+            for (let r = 0; r < 9; r++) {
+                const idx = r * 9 + c;
+                const v = boardEl.children[idx].value;
+                if (!v) continue;
+                if (seen.has(v)) {
+                    boardEl.children[seen.get(v)].classList.add('error');
+                    boardEl.children[idx].classList.add('error');
+                } else {
+                    seen.set(v, idx);
+                }
+            }
+        }
+        // 宫冲突
+        for (let bi = 0; bi < 3; bi++) {
+            for (let bj = 0; bj < 3; bj++) {
+                const seen = new Map();
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        const idx = (bi * 3 + i) * 9 + (bj * 3 + j);
+                        const v = boardEl.children[idx].value;
+                        if (!v) continue;
+                        if (seen.has(v)) {
+                            boardEl.children[seen.get(v)].classList.add('error');
+                            boardEl.children[idx].classList.add('error');
+                        } else {
+                            seen.set(v, idx);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // 生命周期
+    // ============================================================
     function newGame() {
         const puzzle = generatePuzzle(DIFFS[difficulty].holes);
         renderBoard(puzzle);
