@@ -6,165 +6,193 @@
 <link rel="stylesheet" href="../css/common.css">
 <style>
 .nono-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.nono-info { display: flex; gap: 16px; color: var(--text-sub); font-size: 14px; }
-.nono-grid { display: grid; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.4); border-radius: 6px; overflow: hidden; }
-.nono-cell { width: 28px; height: 28px; background: rgba(30,41,59,0.9); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.15s; }
-.nono-cell.filled { background: var(--primary-color); box-shadow: inset 0 0 8px rgba(0,0,0,0.3); }
-.nono-cell.marked { background: rgba(239,68,68,0.4); }
-.nono-clue { display: flex; align-items: center; justify-content: flex-end; padding: 0 6px; font-size: 12px; color: var(--text-sub); background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); }
-.nono-clue.top { justify-content: center; flex-direction: column; height: 100%; }
-.nono-controls { display: flex; gap: 12px; margin-top: 12px; }
+.nono-toolbar { display: flex; gap: 12px; align-items: center; color: var(--text-sub); font-size: 13px; }
+.nono-toolbar b { color: var(--primary); }
+.nono-grid { display: grid; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.5); border-radius: 6px; overflow: hidden; }
+.nono-cell { width: 30px; height: 30px; background: rgba(30,41,59,0.9); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.1s; }
+.nono-cell:hover { background: rgba(255,255,255,0.08); }
+.nono-cell.filled { background: var(--primary); box-shadow: inset 0 0 8px rgba(0,0,0,0.35); }
+.nono-cell.marked { background: rgba(239,68,68,0.35); }
+.nono-clue {
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 6px; font-size: 12px; color: var(--text-sub);
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05);
+    font-weight: 600;
+}
+.nono-clue.top { justify-content: center; flex-direction: column; }
+.nono-clue.corner { background: rgba(0,0,0,0.4); }
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="nono-wrap">
-        <div class="nono-info">
-            <span>尺寸：<span id="sizeLabel">10 × 10</span></span>
-            <span>难度：<span id="levelLabel">简单</span></span>
+        <div class="nono-toolbar">
+            <span>尺寸 <b id="sizeLabel">—</b></span>
+            <span>难度 <b id="levelLabel">—</b></span>
+            <span>剩余 <b id="remainLabel">—</b></span>
         </div>
-        <div id="nonoGrid" class="nono-grid"></div>
-        <div class="nono-controls">
-            <button class="action-btn" id="btnNew">新游戏</button>
-            <button class="action-btn outline" id="btnLevel">切换难度</button>
+        <div id="grid" class="nono-grid"></div>
+        <div style="display:flex; gap:12px;">
+            <button class="btn" id="btnNew">新游戏</button>
+            <button class="btn ghost" id="btnLevel">切换难度</button>
         </div>
     </div>
 </div>
+
+<script src="../js/bridge.js"></script>
 <script>
-// 数织生成器：随机生成一个像素图，计算行列线索
-const LEVELS = [
-    { size: 5,  fill: 0.6, name: '简单' },
-    { size: 10, fill: 0.6, name: '困难' },
-    { size: 15, fill: 0.6, name: '专业' },
-];
-let levelIdx = 0;
-let solution = []; // 二维 0/1
-let grid = [];     // 当前玩家状态：0 空，1 填充，2 标记
+(function () {
+    'use strict';
 
-function generateSolution(size, density) {
-    const sol = [];
-    for (let y = 0; y < size; y++) {
-        const row = [];
-        for (let x = 0; x < size; x++) {
-            // 使用对称性让图案好看：左右镜像
-            row.push(Math.random() < density ? 1 : 0);
+    const LEVELS = [
+        { size: 5,  density: 0.6, name: '简单' },
+        { size: 10, density: 0.6, name: '困难' },
+        { size: 15, density: 0.6, name: '专业' }
+    ];
+
+    let levelIdx = 0;
+    let solution = [];
+    let gridState = [];
+    let totalFilled = 0;
+
+    const gridEl = document.getElementById('grid');
+    const sizeLabel = document.getElementById('sizeLabel');
+    const levelLabel = document.getElementById('levelLabel');
+    const remainLabel = document.getElementById('remainLabel');
+
+    function generateSolution(size, density) {
+        const sol = Array.from({ length: size }, () => Array(size).fill(0));
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x <= Math.floor((size - 1) / 2); x++) {
+                const v = Math.random() < density ? 1 : 0;
+                sol[y][x] = v;
+                sol[y][size - 1 - x] = v; // 左右镜像，图案更美观
+            }
         }
-        sol.push(row);
+        return sol;
     }
-    // 左右镜像使图案对称，更像图案
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < Math.floor(size/2); x++) {
-            sol[y][size-1-x] = sol[y][x];
+
+    function rowClue(row) {
+        const clue = [];
+        let cnt = 0;
+        for (const v of row) {
+            if (v) cnt++;
+            else { if (cnt) clue.push(cnt); cnt = 0; }
         }
-    }
-    return sol;
-}
-
-function getRowClue(row) {
-    const clue = [];
-    let count = 0;
-    for (const v of row) {
-        if (v === 1) count++;
-        else { if (count > 0) clue.push(count); count = 0; }
-    }
-    if (count > 0) clue.push(count);
-    return clue.length ? clue : [0];
-}
-function getColClue(sol, colIdx) {
-    const col = sol.map(r => r[colIdx]);
-    return getRowClue(col);
-}
-
-function render() {
-    const size = solution.length;
-    // 布局：左侧行线索 + 上方列线索 + 棋盘
-    const maxRowClue = Math.max(...solution.map(r => getRowClue(r).length));
-    const maxColClue = Math.max(...Array.from({length: size}, (_, c) => getColClue(solution, c).length));
-    const cellSize = 28;
-
-    const grid = document.getElementById('nonoGrid');
-    grid.innerHTML = '';
-    grid.style.gridTemplateColumns = `${maxRowClue * 30}px repeat(${size}, ${cellSize}px)`;
-    grid.style.gridTemplateRows = `${maxColClue * 30}px repeat(${size}, ${cellSize}px)`;
-
-    // 左上角空白
-    const corner = document.createElement('div');
-    corner.style.gridColumn = `1 / 2`;
-    corner.style.gridRow = `1 / 2`;
-    corner.style.background = 'rgba(0,0,0,0.3)';
-    grid.appendChild(corner);
-
-    // 列线索（顶部）
-    for (let c = 0; c < size; c++) {
-        const clue = getColClue(solution, c);
-        const el = document.createElement('div');
-        el.className = 'nono-clue top';
-        el.style.gridColumn = `${c + 2} / ${c + 3}`;
-        el.style.gridRow = `1 / 2`;
-        el.innerHTML = clue.map(n => `<div>${n}</div>`).join('');
-        grid.appendChild(el);
+        if (cnt) clue.push(cnt);
+        return clue.length ? clue : [0];
     }
 
-    // 行线索（左侧） + 棋盘
-    for (let r = 0; r < size; r++) {
-        const clue = getRowClue(solution[r]);
-        const rowEl = document.createElement('div');
-        rowEl.className = 'nono-clue';
-        rowEl.style.gridColumn = `1 / 2`;
-        rowEl.style.gridRow = `${r + 2} / ${r + 3}`;
-        rowEl.innerText = clue.join('  ');
-        grid.appendChild(rowEl);
+    function colClue(sol, col) {
+        return rowClue(sol.map(r => r[col]));
+    }
 
+    function countFilled() {
+        let n = 0;
+        solution.forEach(r => r.forEach(v => { if (v) n++; }));
+        return n;
+    }
+
+    function render() {
+        const size = solution.length;
+        const rowClues = solution.map(rowClue);
+        const colClues = Array.from({ length: size }, (_, c) => colClue(solution, c));
+        const maxRowClue = Math.max(...rowClues.map(c => c.length));
+        const maxColClue = Math.max(...colClues.map(c => c.length));
+        const cellSize = 30;
+        const clueSize = 24;
+
+        gridEl.innerHTML = '';
+        gridEl.style.gridTemplateColumns = `${maxRowClue * clueSize}px repeat(${size}, ${cellSize}px)`;
+        gridEl.style.gridTemplateRows = `${maxColClue * clueSize}px repeat(${size}, ${cellSize}px)`;
+
+        // 左上角空白
+        const corner = document.createElement('div');
+        corner.className = 'nono-clue corner';
+        corner.style.gridColumn = '1 / 2';
+        corner.style.gridRow = '1 / 2';
+        gridEl.appendChild(corner);
+
+        // 列线索
         for (let c = 0; c < size; c++) {
-            const cell = document.createElement('div');
-            cell.className = 'nono-cell';
-            cell.dataset.r = r;
-            cell.dataset.c = c;
-            if (grid_state[r][c] === 1) cell.classList.add('filled');
-            if (grid_state[r][c] === 2) cell.classList.add('marked');
-            cell.addEventListener('click', () => toggleCell(r, c, 1));
-            cell.addEventListener('contextmenu', e => { e.preventDefault(); toggleCell(r, c, 2); });
-            grid.appendChild(cell);
+            const el = document.createElement('div');
+            el.className = 'nono-clue top';
+            el.style.gridColumn = `${c + 2} / ${c + 3}`;
+            el.style.gridRow = '1 / 2';
+            el.innerHTML = colClues[c].map(n => `<div>${n}</div>`).join('');
+            gridEl.appendChild(el);
+        }
+
+        // 行线索 + 棋盘
+        for (let r = 0; r < size; r++) {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'nono-clue';
+            rowEl.style.gridColumn = '1 / 2';
+            rowEl.style.gridRow = `${r + 2} / ${r + 3}`;
+            rowEl.innerText = rowClues[r].join(' ');
+            gridEl.appendChild(rowEl);
+
+            for (let c = 0; c < size; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'nono-cell';
+                if (gridState[r][c] === 1) cell.classList.add('filled');
+                if (gridState[r][c] === 2) cell.classList.add('marked');
+                cell.addEventListener('click', () => toggle(r, c, 1));
+                cell.addEventListener('contextmenu', e => { e.preventDefault(); toggle(r, c, 2); });
+                gridEl.appendChild(cell);
+            }
         }
     }
-}
 
-let grid_state = [];
-function toggleCell(r, c, mode) {
-    if (mode === 1) {
-        grid_state[r][c] = grid_state[r][c] === 1 ? 0 : 1;
-    } else {
-        grid_state[r][c] = grid_state[r][c] === 2 ? 0 : 2;
-    }
-    render();
-    checkWin();
-}
-
-function checkWin() {
-    const size = solution.length;
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            if ((solution[r][c] === 1) !== (grid_state[r][c] === 1)) return;
+    function toggle(r, c, mode) {
+        if (mode === 1) {
+            gridState[r][c] = gridState[r][c] === 1 ? 0 : 1;
+        } else {
+            gridState[r][c] = gridState[r][c] === 2 ? 0 : 2;
         }
+        render();
+        updateRemain();
+        checkWin();
     }
-    setTimeout(() => alert('恭喜完成！'), 50);
-}
 
-function newGame() {
-    const lv = LEVELS[levelIdx];
-    solution = generateSolution(lv.size, lv.fill);
-    grid_state = Array.from({length: lv.size}, () => Array(lv.size).fill(0));
-    document.getElementById('sizeLabel').innerText = `${lv.size} × ${lv.size}`;
-    document.getElementById('levelLabel').innerText = lv.name;
-    render();
-}
+    function updateRemain() {
+        let filled = 0;
+        gridState.forEach(r => r.forEach(v => { if (v === 1) filled++; }));
+        remainLabel.textContent = Math.max(0, totalFilled - filled);
+    }
 
-document.getElementById('btnNew').onclick = newGame;
-document.getElementById('btnLevel').onclick = () => {
-    levelIdx = (levelIdx + 1) % LEVELS.length;
+    function checkWin() {
+        const size = solution.length;
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                const want = solution[r][c] === 1;
+                const have = gridState[r][c] === 1;
+                if (want !== have) return;
+            }
+        }
+        setTimeout(() => alert('🎉 恭喜完成数织！'), 50);
+    }
+
+    function newGame() {
+        const lv = LEVELS[levelIdx];
+        solution = generateSolution(lv.size, lv.density);
+        gridState = Array.from({ length: lv.size }, () => Array(lv.size).fill(0));
+        totalFilled = countFilled();
+        sizeLabel.textContent = `${lv.size} × ${lv.size}`;
+        levelLabel.textContent = lv.name;
+        updateRemain();
+        render();
+    }
+
+    document.getElementById('btnNew').onclick = newGame;
+    document.getElementById('btnLevel').onclick = () => {
+        levelIdx = (levelIdx + 1) % LEVELS.length;
+        newGame();
+    };
+
     newGame();
-};
-newGame();
+    GameBridge.notifyReady();
+})();
 </script>
 </body>
 </html>
