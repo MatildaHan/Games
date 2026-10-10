@@ -2,31 +2,44 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>爱因斯坦谜题</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.zebra-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 920px; }
+.zebra-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    max-width: 920px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
 
-/* 顶部工具条 */
 .zebra-toolbar {
-    display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
     background: rgba(0,0,0,0.3);
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-radius: 12px;
     font-size: 13px;
     color: var(--text-sub);
+    flex-wrap: wrap;
 }
 .zebra-toolbar b { color: var(--primary); }
-.zebra-nav { display: flex; gap: 8px; }
+.zebra-nav { display: flex; gap: 6px; flex-wrap: wrap; }
 
-/* 题目与线索 */
 .zebra-problem {
     background: rgba(0,0,0,0.3);
-    padding: 16px 20px;
+    padding: 12px 16px;
     border-radius: 12px;
-    font-size: 13px; line-height: 1.9;
+    font-size: 12.5px;
+    line-height: 1.85;
     color: var(--text-sub);
-    max-height: 220px;
+    max-height: 180px;
     overflow-y: auto;
 }
 .zebra-problem b { color: var(--primary); }
@@ -37,49 +50,99 @@
     display: block;
 }
 
-/* 表格 */
+.zebra-table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+
 .zebra-table {
-    width: 100%; border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse;
     background: rgba(0,0,0,0.2);
-    border-radius: 8px; overflow: hidden;
+    border-radius: 8px;
+    overflow: hidden;
     table-layout: fixed;
+    min-width: 480px; /* 手机横向滚动 */
 }
 .zebra-table th, .zebra-table td {
-    padding: 6px 6px; text-align: center;
+    padding: 5px 4px;
+    text-align: center;
     border: 1px solid rgba(255,255,255,0.08);
-    font-size: 12.5px;
+    font-size: 12px;
 }
 .zebra-table th {
     background: rgba(0,0,0,0.3);
     color: var(--primary);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11.5px;
+    white-space: nowrap;
 }
 .zebra-table select {
-    background: rgba(30,41,59,0.9); color: var(--text);
-    border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-    padding: 4px 4px; font-size: 12.5px; cursor: pointer;
-    outline: none; font-family: inherit; width: 100%;
+    background: rgba(30,41,59,0.9);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 2px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+    font-family: inherit;
+    width: 100%;
     text-align-last: center;
+    min-height: 34px;
 }
 .zebra-table select option { background: #1e293b; }
 .zebra-table td.correct { background: rgba(74,222,128,0.25); }
 .zebra-table td.wrong { background: rgba(239,68,68,0.15); }
 
-.zebra-btns { display: flex; gap: 12px; justify-content: center; }
+.zebra-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
 .zebra-result {
-    color: var(--primary); font-weight: 700; font-size: 15px;
-    min-height: 22px; text-align: center;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 22px;
+    text-align: center;
+    padding: 0 8px;
 }
 .zebra-result.warn { color: #fbbf24; }
 .zebra-result.error { color: var(--danger); }
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .zebra-wrap { gap: 8px; }
+    .zebra-toolbar {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+    .zebra-nav .btn {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-height: 36px;
+    }
+    .zebra-problem {
+        font-size: 12px;
+        padding: 10px 12px;
+        max-height: 150px;
+        line-height: 1.75;
+    }
+    .zebra-table th, .zebra-table td { font-size: 11px; padding: 4px 2px; }
+    .zebra-table select { font-size: 11px; padding: 3px 1px; min-height: 32px; }
+    .zebra-btns .btn { font-size: 12px; padding: 8px 12px; min-height: 40px; }
+    .zebra-result { font-size: 13px; }
+}
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="zebra-wrap">
         <div class="zebra-toolbar">
-            <div>题目 <b id="idxLabel">1</b> / <b id="totalLabel">10</b> · <b id="titleLabel">—</b></div>
+            <div>第 <b id="idxLabel">1</b> / <b id="totalLabel">10</b> 题 · <b id="titleLabel">—</b></div>
             <div class="zebra-nav">
                 <button class="btn ghost" id="btnPrev" style="padding:6px 12px; font-size:13px;">← 上一题</button>
                 <button class="btn ghost" id="btnNext" style="padding:6px 12px; font-size:13px;">下一题 →</button>
@@ -89,7 +152,9 @@
 
         <div class="zebra-problem" id="problem"></div>
 
-        <div id="tableWrap"></div>
+        <div class="zebra-table-wrap">
+            <div id="tableWrap"></div>
+        </div>
 
         <div class="zebra-btns">
             <button class="btn" id="btnCheck">检查答案</button>
@@ -110,18 +175,8 @@
 
     // ============================================================
     // 题库：10 道经典逻辑谜题
-    // 每道题结构：
-    //   title: 题目名
-    //   intro: 引言
-    //   clues: [线索文本]
-    //   question: 最终问题
-    //   categories: { key: { label: '列名', values: [...] } }
-    //   answer: [ { key1: v1, key2: v2, ... }, ... ] 每栋房子的正确组合（按房子顺序）
-    //   target: { house: 索引, key: 'pet', value: '鱼' }  用于"检查"提示答案
     // ============================================================
-
     const PUZZLES = [
-        // 1. 经典爱因斯坦谜题
         {
             title: '爱因斯坦谜题',
             intro: '5 栋房子排成一排，每栋房子的主人国籍、饮料、香烟、宠物各不相同。',
@@ -159,8 +214,6 @@
             ],
             target: { house: 3, key: 'nationality', value: '德国人' }
         },
-
-        // 2. 五座房子的足球迷
         {
             title: '足球迷',
             intro: '5 位朋友排成一排住在不同城市，各自支持不同球队、喝不同饮料、养不同宠物。',
@@ -192,8 +245,6 @@
             ],
             target: { house: 2, key: 'city', value: '北京人' }
         },
-
-        // 3. 五色房子与水果
         {
             title: '五色水果',
             intro: '5 栋颜色不同的房子，每栋主人喜欢不同水果、饮料、乐器和运动。',
@@ -226,8 +277,6 @@
             ],
             target: { house: 2, key: 'color', value: '黄色' }
         },
-
-        // 4. 五职业
         {
             title: '五位职业',
             intro: '5 个人从事不同职业，住不同楼层，养不同宠物，喝不同饮料，喜欢不同运动。',
@@ -260,8 +309,6 @@
             ],
             target: { house: 2, key: 'job', value: '律师' }
         },
-
-        // 5. 五国咖啡
         {
             title: '五国咖啡',
             intro: '5 位来自不同国家的人，各自喝不同的咖啡、听不同音乐、养不同宠物、住不同颜色的房子。',
@@ -294,8 +341,6 @@
             ],
             target: { house: 3, key: 'nationality', value: '德国人' }
         },
-
-        // 6. 五位棋手
         {
             title: '五位棋手',
             intro: '5 位棋手坐在不同的位置，各自擅长不同棋类、喝不同茶、养不同宠物、穿不同颜色衣服。',
@@ -327,11 +372,9 @@
             ],
             target: { house: 3, key: 'color', value: '绿色' }
         },
-
-        // 7. 五个学生
         {
             title: '五个学生',
-            intro: '5 位学生坐在一排，各自擅长不同学科、喜欢不同科目、养不同宠物、住不同城市。',
+            intro: '5 位学生坐在一排，各自来自不同城市、擅长不同科目、喜欢不同科目、养不同宠物。',
             clues: [
                 '北京学生擅长数学。',
                 '上海学生喜欢物理。',
@@ -360,11 +403,9 @@
             ],
             target: { house: 2, key: 'city', value: '北京' }
         },
-
-        // 8. 五个花园
         {
             title: '五个花园',
-            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水、种在不同朝向。',
+            intro: '5 个花园种着不同花，各自养不同小动物、用不同颜色围栏、浇不同时间的水。',
             clues: [
                 '红色围栏的花园种玫瑰。',
                 '蓝色围栏的花园种郁金香。',
@@ -393,8 +434,6 @@
             ],
             target: { house: 3, key: 'fence', value: '绿色' }
         },
-
-        // 9. 五辆汽车
         {
             title: '五辆汽车',
             intro: '5 位车主，各自开不同品牌、不同颜色、不同能源、不同座位数的车，养不同宠物。',
@@ -427,8 +466,6 @@
             ],
             target: { house: 2, key: 'brand', value: '丰田' }
         },
-
-        // 10. 五杯咖啡
         {
             title: '五杯咖啡',
             intro: '5 个人在咖啡馆点了不同咖啡、加了不同配料、坐在不同位置、看不同书、穿不同颜色衣服。',
@@ -462,12 +499,9 @@
         }
     ];
 
-    // ============================================================
-    // 状态
-    // ============================================================
     let currentIndex = 0;
-    let state = [];        // [{cat1: val, cat2: val, ...}, ...] 5 个
-    let revealed = [];     // [{cat: true, ...}, ...]
+    let state = [];
+    let revealed = [];
     let hintCount = 0;
 
     const problemEl = document.getElementById('problem');
@@ -479,14 +513,10 @@
 
     const current = () => PUZZLES[currentIndex];
 
-    // ============================================================
-    // 初始化 / 切换题目
-    // ============================================================
     function loadPuzzle(index) {
         currentIndex = ((index % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
         const p = current();
 
-        // 重置状态
         state = Array.from({ length: 5 }, () => {
             const obj = {};
             for (const k of Object.keys(p.categories)) obj[k] = '';
@@ -505,9 +535,6 @@
         renderTable();
     }
 
-    // ============================================================
-    // 渲染题目与线索
-    // ============================================================
     function renderProblem() {
         const p = current();
         let html = `<b>题目：</b>${p.intro}<br><b>线索：</b><br>`;
@@ -518,14 +545,11 @@
         problemEl.innerHTML = html;
     }
 
-    // ============================================================
-    // 渲染表格
-    // ============================================================
     function renderTable() {
         const p = current();
         const cats = Object.keys(p.categories);
 
-        let html = '<table class="zebra-table"><thead><tr><th style="width:80px;">房子</th>';
+        let html = '<table class="zebra-table"><thead><tr><th style="width:70px;">房子</th>';
         for (const k of cats) html += `<th>${p.categories[k].label}</th>`;
         html += '</tr></thead><tbody>';
 
@@ -556,14 +580,10 @@
         });
     }
 
-    // ============================================================
-    // 检查
-    // ============================================================
     function check() {
         const p = current();
         const cats = Object.keys(p.categories);
 
-        // 1. 是否填满
         for (let i = 0; i < 5; i++) {
             for (const k of cats) {
                 if (!state[i][k]) {
@@ -573,7 +593,6 @@
                 }
             }
         }
-        // 2. 每列不重复
         for (const k of cats) {
             const vals = state.map(s => s[k]);
             if (new Set(vals).size !== 5) {
@@ -582,7 +601,6 @@
                 return;
             }
         }
-        // 3. 全对？
         let allCorrect = true;
         for (let i = 0; i < 5; i++) {
             for (const k of cats) {
@@ -599,9 +617,6 @@
         }
     }
 
-    // ============================================================
-    // 提示
-    // ============================================================
     function hint() {
         if (hintCount >= MAX_HINTS) {
             resultEl.className = 'zebra-result warn';
@@ -631,9 +646,6 @@
         renderTable();
     }
 
-    // ============================================================
-    // 按钮
-    // ============================================================
     document.getElementById('btnCheck').onclick = check;
     document.getElementById('btnHint').onclick = hint;
     document.getElementById('btnReset').onclick = () => loadPuzzle(currentIndex);
@@ -647,15 +659,11 @@
         loadPuzzle(next);
     };
 
-    // 键盘快捷键：← / → 切题
     document.addEventListener('keydown', e => {
         if (e.key === 'ArrowLeft') loadPuzzle(currentIndex - 1);
         else if (e.key === 'ArrowRight') loadPuzzle(currentIndex + 1);
     });
 
-    // ============================================================
-    // 启动
-    // ============================================================
     loadPuzzle(0);
     GameBridge.notifyReady();
 })();
