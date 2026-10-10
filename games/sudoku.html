@@ -60,7 +60,7 @@
 .sudoku-cell:nth-child(n+19):nth-child(-n+27),
 .sudoku-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
 
-.sudoku-cell.prefilled { color: #94a3b8; font-weight: 700; cursor: default; }
+.sudoku-cell.prefilled { color: #94a3b8; font-weight: 700; cursor: pointer; }
 .sudoku-cell.hl-light { background: var(--primary-dim); }
 .sudoku-cell.hl-same { background: var(--primary-mid); color: #fff; }
 .sudoku-cell.selected { background: rgba(74, 222, 128, 0.5); box-shadow: inset 0 0 0 2px var(--primary); }
@@ -140,7 +140,6 @@
     const numberPad = document.getElementById('numberPad');
     const statusEl = document.getElementById('status');
 
-    // ---------- 进度存储 ----------
     function loadProgress() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -156,10 +155,8 @@
         return level === 0 || progress[level - 1] >= UNLOCK_THRESHOLD;
     }
 
-    // ---------- UI 构建 ----------
     function buildDiffButtons() {
         const progress = loadProgress();
-        // 保留标题
         diffList.innerHTML = '<div class="card-title" style="margin-bottom:4px;">难度</div>';
         DIFFS.forEach((d, i) => {
             const btn = document.createElement('button');
@@ -201,7 +198,6 @@
         numberPad.appendChild(e);
     }
 
-    // ---------- 数独生成 ----------
     function generatePuzzle(holes) {
         solution = SOLUTIONS[Math.floor(Math.random() * SOLUTIONS.length)];
         const arr = solution.split('');
@@ -216,7 +212,6 @@
         return arr.join('');
     }
 
-    // ---------- 渲染 ----------
     function renderBoard(puzzleStr) {
         boardEl.innerHTML = '';
         selectedIdx = null;
@@ -241,10 +236,8 @@
         statusEl.textContent = `当前难度：${DIFFS[difficulty].name}`;
     }
 
-    // ---------- 交互 ----------
     function focusCell(idx) {
         if (selectedIdx === idx) {
-            // 重复点击同一格：取消选中
             clearHighlights();
             selectedIdx = null;
             return;
@@ -304,7 +297,11 @@
             return;
         }
         const input = boardEl.children[selectedIdx];
-        if (input.readOnly) return;
+        if (input.readOnly) {
+            // 修复：明确提示用户不能修改预填格
+            flashStatus('预填数字不可修改');
+            return;
+        }
         const val = btn.dataset.val;
         input.value = val === '0' ? '' : val;
         input.classList.remove('error');
@@ -356,7 +353,6 @@
         }
         if (hasError) return;
 
-        // 通关
         const progress = loadProgress();
         progress[difficulty]++;
         saveProgress(progress);
@@ -368,18 +364,13 @@
         }, 100);
     }
 
-    // ---------- 生命周期 ----------
     function newGame() {
         const puzzle = generatePuzzle(DIFFS[difficulty].holes);
         renderBoard(puzzle);
     }
 
-    // ---------- 与父页面通信 ----------
-    GameBridge.onParentMessage(() => {
-        // 数独无持续动画，无需特别处理
-    });
+    GameBridge.onParentMessage(() => {});
 
-    // ---------- 初始化 ----------
     buildDiffButtons();
     buildNumberPad();
     newGame();
