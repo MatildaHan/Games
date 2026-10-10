@@ -111,27 +111,40 @@
     function render() {
         gridEl.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
         gridEl.innerHTML = '';
-        for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-            const cell = document.createElement('div');
-            cell.className = 'mine-cell';
-            if (revealed[y][x]) {
-                cell.classList.add('revealed');
-                if (grid[y][x] === -1) {
-                    cell.classList.add('mine');
-                    cell.textContent = '💣';
-                } else if (grid[y][x] > 0) {
-                    cell.textContent = grid[y][x];
-                    cell.classList.add('n' + grid[y][x]);
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                const cell = document.createElement('div');
+                cell.className = 'mine-cell';
+                cell.dataset.x = x;
+                cell.dataset.y = y;
+                if (revealed[y][x]) {
+                    cell.classList.add('revealed');
+                    if (grid[y][x] === -1) {
+                        cell.classList.add('mine');
+                        cell.textContent = '💣';
+                    } else if (grid[y][x] > 0) {
+                        cell.textContent = grid[y][x];
+                        cell.classList.add('n' + grid[y][x]);
+                    }
+                } else if (flagged[y][x]) {
+                    cell.classList.add('flag');
+                    cell.textContent = '🚩';
                 }
-            } else if (flagged[y][x]) {
-                cell.classList.add('flag');
-                cell.textContent = '🚩';
+                cell.onclick = () => leftClick(x, y);
+                gridEl.appendChild(cell);
             }
-            cell.onclick = () => leftClick(x, y);
-            cell.oncontextmenu = e => { e.preventDefault(); rightClick(x, y); };
-            gridEl.appendChild(cell);
         }
     }
+
+    // 事件委托处理右键，避免 Firefox 上菜单闪现
+    gridEl.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const cell = e.target.closest('.mine-cell');
+        if (!cell) return;
+        const x = parseInt(cell.dataset.x, 10);
+        const y = parseInt(cell.dataset.y, 10);
+        rightClick(x, y);
+    });
 
     function leftClick(x, y) {
         if (gameOver || revealed[y][x] || flagged[y][x]) return;
@@ -154,7 +167,6 @@
     }
 
     function floodReveal(x, y) {
-        // 使用栈替代递归，避免大棋盘爆栈
         const stack = [[x, y]];
         while (stack.length) {
             const [cx, cy] = stack.pop();
