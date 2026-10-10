@@ -2,22 +2,73 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>图着色</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
-.gc-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.gc-info { color: var(--text-sub); font-size: 14px; }
-.gc-info b { color: var(--primary); }
-.gc-canvas-wrap { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 12px; }
-.gc-canvas-wrap canvas { display: block; cursor: pointer; border-radius: 6px; }
-.color-picker { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 500px; }
-.color-swatch {
-    width: 40px; height: 40px; border-radius: 8px;
-    cursor: pointer; border: 3px solid transparent;
-    transition: all 0.15s;
+.gc-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
 }
-.color-swatch.active { border-color: #fff; transform: scale(1.1); }
-.gc-legend { color: var(--text-sub); font-size: 12px; }
+.gc-info {
+    color: var(--text-sub);
+    font-size: 14px;
+    text-align: center;
+}
+.gc-info b { color: var(--primary); }
+
+.gc-canvas-wrap {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 8px;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.gc-canvas-wrap canvas {
+    display: block;
+    cursor: pointer;
+    border-radius: 6px;
+    max-width: 100%;
+    height: auto;
+    touch-action: manipulation;
+}
+
+.color-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    padding: 0 8px;
+}
+.color-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.15s;
+    min-width: 36px;
+    min-height: 36px;
+}
+.color-swatch.active {
+    border-color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(255,255,255,0.5);
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .gc-info { font-size: 12px; }
+    .gc-canvas-wrap { padding: 4px; }
+    .color-swatch { width: 36px; height: 36px; }
+}
 </style>
 </head>
 <body>
@@ -31,7 +82,6 @@
         </div>
         <div class="color-picker" id="colorPicker"></div>
         <button class="btn" id="btnNew">新地图</button>
-        <div class="gc-legend">提示：每块区域有一个编号，点击区域即可上色</div>
     </div>
 </div>
 
@@ -51,25 +101,24 @@
     const H = canvas.height;
 
     let currentColor = 0;
-    let regions = [];             // { seed:{x,y}, color:-1, label, pixels:Set }
-    let pixelRegion = null;       // Int32Array，每个像素属于哪个区域
-    let adjacency = null;         // Map<i, Set<j>>
+    let regions = [];
+    let pixelRegion = null;
+    let adjacency = null;
 
     function hexToRgb(hex) {
         const v = parseInt(hex.slice(1), 16);
         return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
     }
 
-    // ---------- 用泊松盘采样生成一组分布均匀的种子 ----------
     function generateSeeds(count) {
         const seeds = [];
         const margin = 50;
-        const minDist = Math.sqrt((W - margin*2) * (H - margin*2) / count) * 0.75;
+        const minDist = Math.sqrt((W - margin * 2) * (H - margin * 2) / count) * 0.75;
         let attempts = 0;
         while (seeds.length < count && attempts < 5000) {
             attempts++;
-            const x = margin + Math.random() * (W - margin*2);
-            const y = margin + Math.random() * (H - margin*2);
+            const x = margin + Math.random() * (W - margin * 2);
+            const y = margin + Math.random() * (H - margin * 2);
             let ok = true;
             for (const s of seeds) {
                 if ((s.x - x) ** 2 + (s.y - y) ** 2 < minDist ** 2) { ok = false; break; }
@@ -79,8 +128,6 @@
         return seeds;
     }
 
-    // ---------- 精确到像素的 Voronoi 划分 ----------
-    // 关键：一次性计算所有像素的归属，避免扫描 step 不一致带来的漏判
     function computePixelRegions() {
         pixelRegion = new Int32Array(W * H);
         for (let y = 0; y < H; y++) {
@@ -96,8 +143,6 @@
         }
     }
 
-    // ---------- 基于像素归属的精确相邻关系 ----------
-    // 每个像素检查右、下两个邻居，如果区域不同则记录一对相邻
     function computeAdjacency() {
         adjacency = new Map();
         for (let i = 0; i < regions.length; i++) adjacency.set(i, new Set());
@@ -122,10 +167,8 @@
         }
     }
 
-    // ---------- 渲染 ----------
     function draw() {
         const img = ctx.createImageData(W, H);
-        // 预先算好每个区域当前的颜色 RGB（未填色为深灰）
         const regionRgb = regions.map(r =>
             r.color >= 0 ? hexToRgb(COLORS[r.color]) : [50, 60, 80]
         );
@@ -143,7 +186,7 @@
         }
         ctx.putImageData(img, 0, 0);
 
-        // 画边界：如果像素与右/下邻居不同区域，画一条暗线
+        // 边界线
         ctx.strokeStyle = 'rgba(0,0,0,0.55)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -174,7 +217,6 @@
         }
     }
 
-    // ---------- 颜色选择器 ----------
     function buildColorPicker() {
         const picker = document.getElementById('colorPicker');
         picker.innerHTML = '';
@@ -192,11 +234,8 @@
         document.getElementById('colorCount').textContent = used.size;
     }
 
-    // ---------- 校验 ----------
     function checkSolved() {
-        // 1. 是否所有区域都已上色
         for (const r of regions) if (r.color < 0) return false;
-        // 2. 是否所有相邻对颜色都不同
         for (const [i, neighbors] of adjacency) {
             for (const j of neighbors) {
                 if (regions[i].color === regions[j].color) return false;
@@ -205,9 +244,7 @@
         return true;
     }
 
-    // ---------- 新地图 ----------
     function newMap() {
-        // 区域数量 8-12
         const n = 8 + Math.floor(Math.random() * 5);
         const seeds = generateSeeds(n);
         regions = seeds.map((s, i) => ({ seed: s, color: -1, label: i + 1 }));
@@ -220,9 +257,9 @@
         updateColorCount();
     }
 
-    // ---------- 点击画布 ----------
     canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
+        // 处理 CSS 缩放（手机端画布可能被缩小）
         const x = Math.floor((e.clientX - rect.left) * (W / rect.width));
         const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
         if (x < 0 || x >= W || y < 0 || y >= H) return;
