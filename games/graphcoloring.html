@@ -12,7 +12,7 @@
     align-items: center;
     gap: 12px;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     justify-content: center;
 }
 .gc-info {
@@ -45,37 +45,50 @@
     flex-wrap: wrap;
     justify-content: center;
     max-width: 100%;
-    padding: 0 8px;
 }
 .color-swatch {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
     cursor: pointer;
     border: 3px solid transparent;
     transition: all 0.15s;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    text-shadow: 0 0 3px rgba(0,0,0,0.7);
 }
 .color-swatch.active {
     border-color: #fff;
-    transform: scale(1.1);
+    transform: scale(1.08);
     box-shadow: 0 0 12px rgba(255,255,255,0.5);
 }
+.color-swatch.eraser {
+    background: rgba(255,255,255,0.08) !important;
+    border: 2px dashed rgba(255,255,255,0.4);
+    color: var(--text-sub);
+}
 
-/* ---------- 手机 ---------- */
 @media (max-width: 767px) {
     .gc-info { font-size: 12px; }
     .gc-canvas-wrap { padding: 4px; }
-    .color-swatch { width: 36px; height: 36px; }
+    .color-swatch { width: 40px; height: 40px; }
 }
 </style>
 </head>
-<body>
+<body class="embedded">
 <div class="game-inner">
     <div class="gc-wrap">
         <div class="gc-info">
-            目标：给所有区域着色，相邻区域不能同色。已用颜色 <b id="colorCount">0</b>
+            目标：给所有区域着色，相邻区域不能同色。<br>
+            最多 <b id="maxColors">4</b> 色 · 已用 <b id="colorCount">0</b>
         </div>
         <div class="gc-canvas-wrap">
             <canvas id="gcCanvas" width="600" height="400"></canvas>
@@ -90,20 +103,38 @@
 (function () {
     'use strict';
 
-    const COLORS = [
+    document.body.classList.add('embedded');
+
+    const ALL_COLORS = [
         '#f87171','#60a5fa','#4ade80','#fbbf24','#a78bfa',
         '#f472b6','#22d3ee','#fb923c','#facc15','#34d399'
     ];
+    const MAX_COLORS = 4; // 四色定理
 
     const canvas = document.getElementById('gcCanvas');
     const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = 600, H = 400;
 
-    let currentColor = 0;
+    // devicePixelRatio
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    // 离屏画布：背景（区域图 + 边界 + 编号）
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = W * DPR;
+    bgCanvas.height = H * DPR;
+    const bgCtx = bgCanvas.getContext('2d');
+    bgCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    let currentColor = 0; // 0 = 擦除
     let regions = [];
     let pixelRegion = null;
     let adjacency = null;
+    let conflictEdges = new Set(); // "i,j" 冲突边
 
     function hexToRgb(hex) {
         const v = parseInt(hex.slice(1), 16);
@@ -167,75 +198,138 @@
         }
     }
 
-    function draw() {
-        const img = ctx.createImageData(W, H);
-        const regionRgb = regions.map(r =>
-            r.color >= 0 ? hexToRgb(COLORS[r.color]) : [50, 60, 80]
-        );
-
+    // 生成背景（区域 + 边界 + 编号）
+    function buildBackground() {
+        bgCtx.clearRect(0, 0, W, H);
+        // 区域填色（未上色为深灰）
+        const img = bgCtx.createImageData(W * DPR, H * DPR);
+        // 简化：用 1x 分辨率绘制，DPR 由画布缩放保证清晰度
+        // 这里直接用 W x H 的像素写入，再交给 putImageData 缩放
+        const tmp = bgCtx.createImageData(W, H);
         for (let y = 0; y < H; y++) {
             for (let x = 0; x < W; x++) {
                 const idx = pixelRegion[y * W + x];
-                const c = regionRgb[idx];
+                const r = regions[idx];
+                const c = r.color >= 0 ? hexToRgb(ALL_COLORS[r.color]) : [50, 60, 80];
                 const p = (y * W + x) * 4;
-                img.data[p] = c[0];
-                img.data[p+1] = c[1];
-                img.data[p+2] = c[2];
-                img.data[p+3] = 255;
+                tmp.data[p] = c[0];
+                tmp.data[p + 1] = c[1];
+                tmp.data[p + 2] = c[2];
+                tmp.data[p + 3] = 255;
             }
         }
-        ctx.putImageData(img, 0, 0);
+        // 用临时画布放大到 DPR 分辨率
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = W;
+        tmpCanvas.height = H;
+        tmpCanvas.getContext('2d').putImageData(tmp, 0, 0);
+        bgCtx.drawImage(tmpCanvas, 0, 0, W, H);
 
-        // 边界线
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
+        // 边界
+        bgCtx.strokeStyle = 'rgba(0,0,0,0.55)';
+        bgCtx.lineWidth = 1.5;
+        bgCtx.beginPath();
         for (let y = 0; y < H; y++) {
             for (let x = 0; x < W; x++) {
                 const a = pixelRegion[y * W + x];
                 if (x + 1 < W && pixelRegion[y * W + (x + 1)] !== a) {
-                    ctx.moveTo(x + 1, y);
-                    ctx.lineTo(x + 1, y + 1);
+                    bgCtx.moveTo(x + 1, y);
+                    bgCtx.lineTo(x + 1, y + 1);
                 }
                 if (y + 1 < H && pixelRegion[(y + 1) * W + x] !== a) {
-                    ctx.moveTo(x, y + 1);
-                    ctx.lineTo(x + 1, y + 1);
+                    bgCtx.moveTo(x, y + 1);
+                    bgCtx.lineTo(x + 1, y + 1);
                 }
             }
         }
-        ctx.stroke();
+        bgCtx.stroke();
 
         // 编号
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        bgCtx.font = 'bold 16px sans-serif';
+        bgCtx.textAlign = 'center';
+        bgCtx.textBaseline = 'middle';
         for (const r of regions) {
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillText(r.label, r.seed.x + 1, r.seed.y + 1);
-            ctx.fillStyle = '#fff';
-            ctx.fillText(r.label, r.seed.x, r.seed.y);
+            bgCtx.fillStyle = 'rgba(0,0,0,0.6)';
+            bgCtx.fillText(r.label, r.seed.x + 1, r.seed.y + 1);
+            bgCtx.fillStyle = '#fff';
+            bgCtx.fillText(r.label, r.seed.x, r.seed.y);
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(bgCanvas, 0, 0, W, H);
+
+        // 冲突边（红色粗线）
+        if (conflictEdges.size > 0) {
+            ctx.strokeStyle = 'rgba(239,68,68,0.9)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const a = pixelRegion[y * W + x];
+                    if (x + 1 < W) {
+                        const b = pixelRegion[y * W + (x + 1)];
+                        if (a !== b && conflictEdges.has(a < b ? `${a},${b}` : `${b},${a}`)) {
+                            ctx.moveTo(x + 1, y - 1);
+                            ctx.lineTo(x + 1, y + 2);
+                        }
+                    }
+                    if (y + 1 < H) {
+                        const b = pixelRegion[(y + 1) * W + x];
+                        if (a !== b && conflictEdges.has(a < b ? `${a},${b}` : `${b},${a}`)) {
+                            ctx.moveTo(x - 1, y + 1);
+                            ctx.lineTo(x + 2, y + 1);
+                        }
+                    }
+                }
+            }
+            ctx.stroke();
+        }
+    }
+
+    function recomputeConflicts() {
+        conflictEdges.clear();
+        for (const [i, neighbors] of adjacency) {
+            if (regions[i].color < 0) continue;
+            for (const j of neighbors) {
+                if (regions[j].color < 0) continue;
+                if (regions[i].color === regions[j].color) {
+                    conflictEdges.add(i < j ? `${i},${j}` : `${j},${i}`);
+                }
+            }
         }
     }
 
     function buildColorPicker() {
         const picker = document.getElementById('colorPicker');
         picker.innerHTML = '';
-        COLORS.forEach((c, i) => {
-            const sw = document.createElement('div');
-            sw.className = 'color-swatch' + (i === currentColor ? ' active' : '');
-            sw.style.background = c;
-            sw.onclick = () => { currentColor = i; buildColorPicker(); };
-            picker.appendChild(sw);
-        });
+        // 擦除按钮
+        const eraser = document.createElement('button');
+        eraser.className = 'color-swatch eraser' + (currentColor === 0 ? ' active' : '');
+        eraser.setAttribute('aria-label', '擦除');
+        eraser.textContent = '⌫';
+        eraser.onclick = () => { currentColor = 0; buildColorPicker(); };
+        picker.appendChild(eraser);
+
+        for (let i = 1; i <= MAX_COLORS; i++) {
+            const c = ALL_COLORS[i - 1];
+            const btn = document.createElement('button');
+            btn.className = 'color-swatch' + (currentColor === i ? ' active' : '');
+            btn.style.background = c;
+            btn.setAttribute('aria-label', `颜色 ${i}`);
+            btn.onclick = () => { currentColor = i; buildColorPicker(); };
+            picker.appendChild(btn);
+        }
     }
 
     function updateColorCount() {
-        const used = new Set(regions.filter(r => r.color >= 0).map(r => r.color));
+        const used = new Set(regions.filter(r => r.color > 0).map(r => r.color));
         document.getElementById('colorCount').textContent = used.size;
     }
 
     function checkSolved() {
-        for (const r of regions) if (r.color < 0) return false;
+        for (const r of regions) if (r.color <= 0) return false;
         for (const [i, neighbors] of adjacency) {
             for (const j of neighbors) {
                 if (regions[i].color === regions[j].color) return false;
@@ -247,11 +341,12 @@
     function newMap() {
         const n = 8 + Math.floor(Math.random() * 5);
         const seeds = generateSeeds(n);
-        regions = seeds.map((s, i) => ({ seed: s, color: -1, label: i + 1 }));
+        regions = seeds.map((s, i) => ({ seed: s, color: 0, label: i + 1 }));
 
         computePixelRegions();
         computeAdjacency();
-
+        conflictEdges.clear();
+        buildBackground();
         draw();
         buildColorPicker();
         updateColorCount();
@@ -259,13 +354,14 @@
 
     canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
-        // 处理 CSS 缩放（手机端画布可能被缩小）
         const x = Math.floor((e.clientX - rect.left) * (W / rect.width));
         const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
         if (x < 0 || x >= W || y < 0 || y >= H) return;
 
         const idx = pixelRegion[y * W + x];
         regions[idx].color = currentColor;
+        buildBackground();
+        recomputeConflicts();
         draw();
         updateColorCount();
 
@@ -275,6 +371,7 @@
     });
 
     document.getElementById('btnNew').onclick = newMap;
+    document.getElementById('maxColors').textContent = MAX_COLORS;
 
     newMap();
     GameBridge.notifyReady();
