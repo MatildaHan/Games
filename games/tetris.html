@@ -2,29 +2,122 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>俄罗斯方块</title>
 <link rel="stylesheet" href="../css/common.css">
 <style>
+/* ---------- 布局：桌面三栏 / 手机单栏 ---------- */
 .tetris-layout {
     display: grid;
     grid-template-columns: 160px auto 180px;
     gap: 24px;
     align-items: flex-start;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
 }
-.tetris-side { display: flex; flex-direction: column; gap: 16px; }
+.tetris-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
 #tetris-canvas {
+    display: block;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
 }
-#next-canvas { display: block; margin: 0 auto; }
-.btn-rotate { height: 72px; font-size: 18px; }
+#next-canvas {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+.btn-rotate {
+    height: 68px;
+    font-size: 18px;
+}
+
+/* 移动端虚拟按键 */
+.touch-controls {
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+}
+.touch-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text);
+    border-radius: 10px;
+    height: 56px;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    font-family: inherit;
+}
+.touch-btn:active { background: var(--primary-mid); }
+
+/* ---------- 平板 ---------- */
+@media (max-width: 1023px) {
+    .tetris-layout {
+        grid-template-columns: 130px auto 150px;
+        gap: 16px;
+    }
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 767px) {
+    .tetris-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        align-items: center;
+        justify-items: center;
+    }
+    .tetris-side {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        gap: 8px;
+    }
+    .tetris-side .card {
+        flex: 1 1 100px;
+        min-width: 100px;
+        padding: 8px;
+        text-align: center;
+    }
+    .tetris-side .card .card-title { font-size: 11px; margin-bottom: 4px; }
+    .tetris-side .card .card-value { font-size: 18px; }
+    .tetris-side .card canvas { width: 70px; height: 70px; }
+    .tetris-side #btnStart { flex: 1 1 100%; }
+    .tetris-side .btn-rotate { display: none; } /* 手机用虚拟按键 */
+    .tetris-side .card:last-child { display: none; } /* 隐藏操作说明 */
+    .touch-controls { display: grid; }
+    #tetris-canvas {
+        width: auto;
+        max-height: 45vh;
+    }
+}
 </style>
 </head>
 <body>
 <div class="game-inner">
     <div class="tetris-layout">
+        <!-- 左侧 -->
         <div class="tetris-side">
             <div class="card" style="text-align:center;">
                 <div class="card-title">下一个</div>
@@ -37,8 +130,10 @@
             <button class="btn" id="btnStart">开始游戏</button>
         </div>
 
+        <!-- 中间：主画布 -->
         <canvas id="tetris-canvas" width="240" height="480"></canvas>
 
+        <!-- 右侧 -->
         <div class="tetris-side">
             <button class="btn ghost btn-rotate" id="btnRotate">↻ 旋转</button>
             <div class="card" style="font-size:12px; line-height:1.7; color:var(--text-sub);">
@@ -49,6 +144,14 @@
                 空格 落底
             </div>
         </div>
+    </div>
+
+    <!-- 手机虚拟按键 -->
+    <div class="touch-controls" id="touchControls">
+        <button class="touch-btn" data-action="left">←</button>
+        <button class="touch-btn" data-action="rotate">↻</button>
+        <button class="touch-btn" data-action="right">→</button>
+        <button class="touch-btn" data-action="down">↓</button>
     </div>
 
     <div class="modal" id="modal">
@@ -92,9 +195,9 @@
     const finalScoreEl = document.getElementById('finalScore');
     const btnRestart = document.getElementById('btnRestart');
     const btnLeave = document.getElementById('btnLeave');
+    const touchControls = document.getElementById('touchControls');
 
     let board, score, current, next, dropCounter, lastTime, rafId, state;
-    // state: 'idle' | 'running' | 'paused' | 'over'
 
     function reset() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -106,7 +209,6 @@
         scoreEl.textContent = '0';
         state = 'idle';
         if (rafId) cancelAnimationFrame(rafId);
-        // 修复：确保按钮恢复为“开始游戏”及绑定的 start
         btnStart.textContent = '开始游戏';
         btnStart.onclick = start;
         btnStart.disabled = false;
@@ -183,6 +285,7 @@
         if (!current || state !== 'running') return;
         current.x += dx;
         if (collide()) current.x -= dx;
+        draw();
     }
 
     function softDrop() {
@@ -193,6 +296,7 @@
             merge();
         }
         dropCounter = 0;
+        draw();
     }
 
     function hardDrop() {
@@ -285,7 +389,6 @@
     }
 
     function leave() {
-        // 清空所有状态，回到初始
         modal.classList.remove('show');
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         score = 0;
@@ -307,20 +410,63 @@
     btnRestart.addEventListener('click', start);
     btnLeave.addEventListener('click', leave);
 
+    // 手机虚拟按键
+    touchControls.addEventListener('click', (e) => {
+        const btn = e.target.closest('.touch-btn');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'left') move(-1);
+        else if (action === 'right') move(1);
+        else if (action === 'down') softDrop();
+        else if (action === 'rotate') rotate();
+    });
+
+    // 手机滑动手势（在画布上）
+    let touchStartX = 0, touchStartY = 0, touchMoved = false;
+    canvas.addEventListener('touchstart', (e) => {
+        if (state !== 'running') return;
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchMoved = false;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (state !== 'running') return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const threshold = 30;
+        if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)) {
+            move(dx > 0 ? 1 : -1);
+            touchStartX = t.clientX;
+            touchMoved = true;
+        } else if (dy > threshold) {
+            softDrop();
+            touchStartY = t.clientY;
+            touchMoved = true;
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (state !== 'running') return;
+        // 点击（无滑动）→ 旋转
+        if (!touchMoved) rotate();
+    });
+
     document.addEventListener('keydown', e => {
         if (state !== 'running') return;
         const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
         if (keys.includes(e.key)) e.preventDefault();
         switch (e.key) {
-            case 'ArrowLeft': move(-1); draw(); break;
-            case 'ArrowRight': move(1); draw(); break;
-            case 'ArrowDown': softDrop(); draw(); break;
+            case 'ArrowLeft': move(-1); break;
+            case 'ArrowRight': move(1); break;
+            case 'ArrowDown': softDrop(); break;
             case 'ArrowUp': rotate(); break;
             case ' ': hardDrop(); break;
         }
     });
 
-    // 与父页面通信：切走时暂停
     GameBridge.onParentMessage((msg) => {
         if (msg.type === 'pause' && state === 'running') {
             state = 'paused';
@@ -338,7 +484,6 @@
         }
     });
 
-    // 初始化
     reset();
     GameBridge.notifyReady();
 })();
